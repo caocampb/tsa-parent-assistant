@@ -31,8 +31,8 @@
 - **Cost**: $52/month acceptable for quality
 
 ### 3. Smart RAG Pipeline
-- **Chunking**: 1000 tokens with 200 overlap
-- **Threshold**: 0.7 minimum confidence
+- **Chunking**: 250 tokens with 50 overlap (focused topic chunks)
+- **Threshold**: 0.3 minimum confidence (lower due to semantic dilution)
 - **Cache**: Top 20 questions pre-computed
 - **Why**: Handles 95% of queries at 1.5s
 
@@ -120,8 +120,8 @@ questions (
 ## RAG Implementation Details
 
 ### Retrieval Strategy
-- **Query**: Retrieve top 10 chunks with cosine similarity > 0.7
-- **Threshold Check**: If best chunk < 0.7 → immediate "I don't know" response
+- **Query**: Retrieve top 10 chunks with cosine similarity > 0.3
+- **Threshold Check**: If best chunk < 0.3 → immediate "I don't know" response
 - **Context Building**: Include retrieved chunks sorted by similarity
 - **Source Tracking**: Preserve metadata for citation display
 
@@ -135,7 +135,7 @@ questions (
 ```
 User Question → Embed → Vector Search
                           ↓
-                    Best match < 0.7?
+                    Best match < 0.3?
                     ↙            ↘
                   Yes             No
                    ↓              ↓
@@ -168,7 +168,7 @@ User Question → Embed → Vector Search
 
 ### The Key Optimizations
 - **Overlap Chunking** (+40% accuracy): Answers often span boundaries
-- **0.7 Confidence Threshold** (+trust): Better to say "I don't know"
+- **0.3 Confidence Threshold** (balanced): Catches most relevant content while filtering noise
 - **Top 20 Cache** (-60% load): Same questions asked 100x daily
 - **Share Button** (+engagement): Parents forward to other parents
 
