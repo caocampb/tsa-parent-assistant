@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import mammoth from 'mammoth';
+import { extractText } from 'unpdf';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import OpenAI from 'openai';
-
-// Dynamic import to avoid pdf-parse test file issue
-const loadPdfParse = () => import('pdf-parse');
 
 // Initialize OpenAI
 const openai = new OpenAI({
@@ -189,10 +187,11 @@ async function processFile(file: File, documentId: string): Promise<any[]> {
     case 'pdf':
       const pdfBuffer = await file.arrayBuffer();
       try {
-        // Use the dynamic import we defined
-        const pdfParse = await loadPdfParse();
-        const pdfData = await pdfParse.default(Buffer.from(pdfBuffer));
-        content = pdfData.text;
+        // Use unpdf for modern, reliable PDF text extraction
+        const { text } = await extractText(new Uint8Array(pdfBuffer), {
+          mergePages: true // Merge all pages into single text for chunking
+        });
+        content = text;
       } catch (error: any) {
         console.error('PDF parsing error:', error);
         throw new Error(`Failed to parse PDF: ${error.message}`);
