@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import mammoth from 'mammoth';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
+import OpenAI from 'openai';
 
 // Dynamic import to avoid pdf-parse test file issue
 const loadPdfParse = () => import('pdf-parse');
+
+// Initialize OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || ''
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -183,15 +189,96 @@ async function processFile(file: File, documentId: string): Promise<any[]> {
       
     case 'mp3':
     case 'wav':
-      // TODO: Implement audio transcription with OpenAI Whisper
-      console.log('Audio transcription not implemented yet');
-      return [];
+      // Check if OpenAI API key is available
+      if (!process.env.OPENAI_API_KEY) {
+        throw new Error('OpenAI API key not configured for audio transcription');
+      }
+      
+      // Transcribe audio using Whisper
+      try {
+        const audioFile = new File([await file.arrayBuffer()], file.name, { type: file.type });
+        
+        const transcription = await openai.audio.transcriptions.create({
+          file: audioFile,
+          model: 'whisper-1',
+          response_format: 'verbose_json', // Get timestamps
+          language: 'en' // TSA is English-only
+        }) as any; // Type assertion for verbose response
+        
+        // Process segments with timestamps
+        if (transcription.segments) {
+          // Combine segments into larger chunks while preserving timestamps
+          const segments = transcription.segments;
+          let currentChunk = '';
+          let currentStartTime = 0;
+          const timedChunks: { content: string; timestamp: number }[] = [];
+          
+          for (const segment of segments) {
+            // If adding this segment would exceed chunk size, save current chunk
+            if (currentChunk.length + segment.text.length > 1000) {
+              if (currentChunk) {
+                timedChunks.push({
+                  content: currentChunk.trim(),
+                  timestamp: currentStartTime
+                });
+              }
+              currentChunk = segment.text;
+              currentStartTime = segment.start;
+            } else {
+              currentChunk += ' ' + segment.text;
+            }
+          }
+          
+          // Don't forget the last chunk
+          if (currentChunk) {
+            timedChunks.push({
+              content: currentChunk.trim(),
+              timestamp: currentStartTime
+            });
+          }
+          
+          // Store chunks with timestamps
+          const chunkRecords = timedChunks.map((chunk, index) => ({
+            document_id: documentId,
+            chunk_index: index,
+            content: chunk.content,
+            page_number: null,
+            audio_timestamp: chunk.timestamp
+          }));
+          
+          if (chunkRecords.length > 0) {
+            const { error } = await supabase
+              .from('document_chunks')
+              .insert(chunkRecords);
+              
+            if (error) {
+              console.error('Error storing audio chunks:', error);
+              throw new Error('Failed to store audio chunks');
+            }
+          }
+          
+          return chunkRecords;
+        } else {
+          // Fallback: use full text without timestamps
+          content = transcription.text;
+        }
+      } catch (error: any) {
+        console.error('Audio transcription error:', error);
+        throw new Error(`Audio transcription failed: ${error.message}`);
+      }
+      break;
       
     default:
       throw new Error(`Unsupported file type: ${fileType}`);
   }
 
-  // Chunk the content
+  // Skip if already processed (audio with timestamps)
+  if (fileType === 'mp3' || fileType === 'wav') {
+    // Audio was already processed with timestamps
+    return [];
+  }
+
+  // Chunk the content for non-audio files
   const splitter = new RecursiveCharacterTextSplitter({
     chunkSize: 1000,
     chunkOverlap: 200,
