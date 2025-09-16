@@ -4,6 +4,7 @@ import mammoth from 'mammoth';
 import { extractText } from 'unpdf';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import OpenAI from 'openai';
+import { encoding_for_model } from 'tiktoken';
 
 // Initialize OpenAI
 const openai = new OpenAI({
@@ -320,10 +321,18 @@ async function processFile(file: File, documentId: string): Promise<any[]> {
   }
 
   // Chunk the content for non-audio files
+  // Using exact token counting with tiktoken for accurate chunking
+  // cl100k_base is used by text-embedding-3-large
+  const encoder = encoding_for_model('text-embedding-3-large');
+  
   const splitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 1000,
-    chunkOverlap: 200,
-    separators: ['\n\n', '\n', '. ', ' ', '']
+    chunkSize: 1000,      // Exact tokens via tiktoken
+    chunkOverlap: 200,    // 200 tokens overlap
+    separators: ['\n\n', '\n', '. ', ' ', ''],
+    lengthFunction: (text: string) => {
+      // Count exact tokens using the same encoding as our embedding model
+      return encoder.encode(text).length;
+    }
   });
 
   const chunks = await splitter.splitText(content);
