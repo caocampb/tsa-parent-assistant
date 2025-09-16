@@ -82,6 +82,7 @@ documents (
   id uuid primary key default gen_random_uuid(),
   filename text not null,
   doc_type text not null, -- handbook | newsletter | minutes | transcript
+  idempotency_key text UNIQUE, -- Stripe-style deduplication
   uploaded_at timestamp default now()
 )
 ```
