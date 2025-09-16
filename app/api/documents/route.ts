@@ -172,9 +172,15 @@ async function processFile(file: File, documentId: string): Promise<any[]> {
   switch (fileType) {
     case 'pdf':
       const pdfBuffer = await file.arrayBuffer();
-      const pdfParse = await loadPdfParse();
-      const pdfData = await pdfParse.default(Buffer.from(pdfBuffer));
-      content = pdfData.text;
+      try {
+        // Use the dynamic import we defined
+        const pdfParse = await loadPdfParse();
+        const pdfData = await pdfParse.default(Buffer.from(pdfBuffer));
+        content = pdfData.text;
+      } catch (error: any) {
+        console.error('PDF parsing error:', error);
+        throw new Error(`Failed to parse PDF: ${error.message}`);
+      }
       break;
       
     case 'docx':
