@@ -70,29 +70,36 @@
 
 ### Database Schema
 
+Our schema avoids common anti-patterns:
+- **UUIDs instead of intelligent keys**: Prevents refactoring pain
+- **Extracted common fields**: page_number and audio_timestamp as columns for fast queries
+- **Proper cascading**: ON DELETE CASCADE for clean document removal
+- **Pragmatic arrays**: sources text[] is fine for V1 (not over-normalized)
+
 #### Documents Table
 ```sql
 documents (
-  id uuid primary key,
+  id uuid primary key default gen_random_uuid(),
   filename text not null,
   doc_type text not null, -- handbook | newsletter | minutes | transcript
-  uploaded_at timestamp,
-  file_size integer,
-  total_chunks integer
+  uploaded_at timestamp default now()
 )
 ```
 
 #### Document Chunks Table  
 ```sql
 document_chunks (
-  id text primary key, -- doc_handbook_2025_chunk_47
-  document_id uuid references documents(id),
+  id uuid primary key default gen_random_uuid(),
+  document_id uuid references documents(id) ON DELETE CASCADE,
+  chunk_index integer not null,
   content text not null,
   embedding vector(1536),
-  chunk_index integer,
-  metadata jsonb, -- {page, timestamp, section, has_overlap}
   
-  -- For efficient similarity search
+  -- Extracted from JSONB for performance (anti-pattern fix)
+  page_number integer,      -- For PDFs/DOCX
+  audio_timestamp float,    -- For audio files
+  
+  UNIQUE(document_id, chunk_index),
   INDEX idx_embedding USING hnsw (embedding vector_cosine_ops)
 )
 ```
@@ -100,12 +107,12 @@ document_chunks (
 #### Questions Table (Analytics)
 ```sql
 questions (
-  id uuid primary key,
-  question text,
-  had_answer boolean,
+  id uuid primary key default gen_random_uuid(),
+  question text not null,
+  answer text,
+  sources text[],  -- Array is fine for V1
   confidence float,
-  sources text[],
-  asked_at timestamp
+  created_at timestamp default now()
 )
 ```
 
