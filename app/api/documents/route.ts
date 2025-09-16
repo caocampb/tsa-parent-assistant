@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
+
+// Dynamic import to avoid pdf-parse test file issue
+const loadPdfParse = () => import('pdf-parse');
 
 export async function POST(request: NextRequest) {
   try {
@@ -164,7 +166,8 @@ async function processFile(file: File, documentId: string): Promise<any[]> {
   switch (fileType) {
     case 'pdf':
       const pdfBuffer = await file.arrayBuffer();
-      const pdfData = await pdf(Buffer.from(pdfBuffer));
+      const pdfParse = await loadPdfParse();
+      const pdfData = await pdfParse.default(Buffer.from(pdfBuffer));
       content = pdfData.text;
       break;
       
