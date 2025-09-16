@@ -111,6 +111,11 @@ export default function TestUpload() {
             <pre className="mt-2 text-sm text-green-700">
               {JSON.stringify(result, null, 2)}
             </pre>
+            {result.embeddings_generated && (
+              <p className="mt-3 text-sm font-medium text-green-700">
+                ✅ Embeddings generated for all {result.chunk_count} chunks!
+              </p>
+            )}
           </div>
         )}
       </div>

@@ -14,6 +14,20 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if OpenAI API key is configured
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { 
+          error: {
+            type: 'configuration_error',
+            message: 'OpenAI API key not configured. Please add OPENAI_API_KEY to your environment variables.',
+            code: 'missing_api_key'
+          }
+        },
+        { status: 500 }
+      );
+    }
+
     // Check idempotency key
     const idempotencyKey = request.headers.get('idempotency-key');
     if (!idempotencyKey) {
@@ -114,13 +128,15 @@ export async function POST(request: NextRequest) {
     // Process file content
     const chunks = await processFile(file, document.id);
     
-    // Return resource with actual chunk count
+    // Return resource with actual chunk count and embedding status
     return NextResponse.json({
       id: document.id,
       filename: document.filename,
       doc_type: document.doc_type,
       chunk_count: chunks.length,
-      uploaded_at: document.uploaded_at
+      uploaded_at: document.uploaded_at,
+      embeddings_generated: chunks.length > 0,
+      message: chunks.length > 0 ? `Successfully processed ${chunks.length} chunks with embeddings` : 'Document uploaded'
     }, { status: 201 }); // 201 Created
 
   } catch (error) {
@@ -243,14 +259,34 @@ async function processFile(file: File, documentId: string): Promise<any[]> {
             });
           }
           
-          // Store chunks with timestamps
-          const chunkRecords = timedChunks.map((chunk, index) => ({
-            document_id: documentId,
-            chunk_index: index,
-            content: chunk.content,
-            page_number: null,
-            audio_timestamp: chunk.timestamp
-          }));
+          // Generate embeddings for audio chunks
+          console.log(`Generating embeddings for ${timedChunks.length} audio chunks...`);
+          const chunkRecords = [];
+          
+          for (let i = 0; i < timedChunks.length; i++) {
+            const chunk = timedChunks[i];
+            
+            try {
+              // Generate embedding for this chunk
+              const embeddingResponse = await openai.embeddings.create({
+                input: chunk.content,
+                model: 'text-embedding-3-large',
+                dimensions: 1536
+              });
+              
+              chunkRecords.push({
+                document_id: documentId,
+                chunk_index: i,
+                content: chunk.content,
+                page_number: null,
+                audio_timestamp: chunk.timestamp,
+                embedding: embeddingResponse.data[0].embedding
+              });
+            } catch (error: any) {
+              console.error(`Error generating embedding for audio chunk ${i}:`, error);
+              throw new Error(`Failed to generate audio embeddings: ${error.message}`);
+            }
+          }
           
           if (chunkRecords.length > 0) {
             const { error } = await supabase
@@ -293,15 +329,34 @@ async function processFile(file: File, documentId: string): Promise<any[]> {
 
   const chunks = await splitter.splitText(content);
   
-  // Store chunks in database
-  const chunkRecords = chunks.map((chunk, index) => ({
-    document_id: documentId,
-    chunk_index: index,
-    content: chunk,
-    page_number: pageNumber,
-    audio_timestamp: audioTimestamp,
-    // embedding will be added later
-  }));
+  // Generate embeddings for each chunk
+  console.log(`Generating embeddings for ${chunks.length} chunks...`);
+  const chunkRecords = [];
+  
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    
+    try {
+      // Generate embedding for this chunk
+      const embeddingResponse = await openai.embeddings.create({
+        input: chunk,
+        model: 'text-embedding-3-large',
+        dimensions: 1536 // Match our vector column size
+      });
+      
+      chunkRecords.push({
+        document_id: documentId,
+        chunk_index: i,
+        content: chunk,
+        page_number: pageNumber,
+        audio_timestamp: audioTimestamp,
+        embedding: embeddingResponse.data[0].embedding
+      });
+    } catch (error: any) {
+      console.error(`Error generating embedding for chunk ${i}:`, error);
+      throw new Error(`Failed to generate embeddings: ${error.message}`);
+    }
+  }
 
   if (chunkRecords.length > 0) {
     const { error } = await supabase
