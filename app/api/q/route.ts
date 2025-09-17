@@ -28,13 +28,22 @@ function generateQueryVariations(question: string): string[] {
   const noPunctuation = question.replace(/[?!.]$/, '');
   if (noPunctuation !== question) variations.push(noPunctuation);
   
-  // Common rephrasing patterns
+  // Common rephrasing patterns - expanded for better coverage
   const replacements = [
     [/how much does (.*) cost/i, 'what is the cost of $1'],
     [/what's/i, 'what is'],
+    [/what're/i, 'what are'],
     [/i'm/i, 'i am'],
     [/tell me all/i, 'what are all'],
     [/tell me about/i, 'what is'],
+    [/tell me the/i, 'what is the'],
+    [/can you tell me/i, 'what is'],
+    [/could you tell me/i, 'what is'],
+    [/i need to know/i, 'what is'],
+    [/do you know/i, 'what is'],
+    [/please explain/i, 'what is'],
+    [/^how much\??$/i, 'how much does TSA cost'],  // Handle "how much??"
+    [/my kid is (\d+)/i, 'my $1 year old'],         // "My kid is 7" → "my 7 year old"
   ];
   
   for (const [pattern, replacement] of replacements) {
@@ -107,7 +116,13 @@ function calculateKeywordOverlap(question: string, content: string): number {
 }
 
 export async function POST(request: NextRequest) {
-  const { question, audience: providedAudience } = await request.json();
+  const { question: rawQuestion, audience: providedAudience } = await request.json();
+  
+  // Sanitize input for consistent embeddings
+  const question = rawQuestion
+    .trim()                           // Remove leading/trailing spaces
+    .replace(/\s+/g, ' ')            // Normalize multiple spaces
+    .replace(/[?!.]+$/, '?');        // Normalize ending punctuation
   
   // Check if client wants streaming (default to JSON for compatibility)
   const acceptsStream = request.headers.get('accept')?.includes('text/event-stream');
@@ -161,13 +176,13 @@ export async function POST(request: NextRequest) {
         similarity: bestQAMatch.similarity,
         audience: bestQAMatch.audience
       } : null,
-      willUseQA: bestQAMatch && bestQAMatch.similarity >= 0.85,
-      ragFallback: !bestQAMatch || bestQAMatch.similarity < 0.85
+      willUseQA: bestQAMatch && bestQAMatch.similarity >= 0.75,
+      ragFallback: !bestQAMatch || bestQAMatch.similarity < 0.75
     });
   }
   
-  // If we have a high-confidence Q&A match, use it directly
-  if (bestQAMatch && bestQAMatch.similarity >= 0.85) {
+  // If we have a Q&A match above our search threshold, use it
+  if (bestQAMatch && bestQAMatch.similarity >= 0.75) {
     const qaAnswer = bestQAMatch.answer;
     
     if (acceptsStream) {
