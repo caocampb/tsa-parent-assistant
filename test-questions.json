@@ -1,0 +1,169 @@
+{
+  "test_categories": {
+    "qa_coverage": "Tests that Q&A pairs are working correctly for common questions",
+    "rag_capability": "Tests that RAG can handle variations WITHOUT Q&A pairs", 
+    "real_world": "Realistic user questions that test the full system"
+  },
+  "test_questions": [
+    {
+      "id": "qa_exact_cost",
+      "question": "How much does TSA cost?",
+      "expected_answer": "Monthly tuition is $200/month",
+      "must_include": ["$200"],
+      "must_not_include": ["$15k", "$4k", "revenue"],
+      "expected_audience": "parent",
+      "expected_source": "qa_pair",
+      "category": "qa_coverage",
+      "note": "Tests exact Q&A match"
+    },
+    {
+      "id": "qa_exact_insurance",
+      "question": "What are the insurance fees?",
+      "expected_answer": "Insurance fee is $50/year",
+      "must_include": ["$50"],
+      "must_not_include": ["CGL", "liability"],
+      "expected_audience": "parent",
+      "expected_source": "qa_pair",
+      "category": "qa_coverage",
+      "note": "Tests Q&A pair we added"
+    },
+    {
+      "id": "qa_exact_refund",
+      "question": "Can I get a refund?",
+      "expected_answer": "Non-refundable after 5th",
+      "must_include": ["non-refundable", "5th"],
+      "expected_audience": "parent",
+      "expected_source": "qa_pair",
+      "category": "qa_coverage",
+      "note": "Tests Q&A pair we added"
+    },
+    {
+      "id": "rag_cost_variation_1",
+      "question": "What's the total cost per year for my child?",
+      "expected_answer": "Should calculate annual costs",
+      "must_include": ["200"],
+      "must_not_include": ["$15k", "revenue"],
+      "expected_audience": "parent",
+      "forbidden_source": "qa_pair",
+      "category": "rag_capability",
+      "note": "Annual calculation - no Q&A pair exists"
+    },
+    {
+      "id": "rag_cost_variation_2", 
+      "question": "How much do I pay each month including all fees?",
+      "expected_answer": "Monthly breakdown with fees amortized",
+      "must_include": ["200"],
+      "expected_audience": "parent",
+      "forbidden_source": "qa_pair",
+      "category": "rag_capability",
+      "note": "Different phrasing - must use RAG"
+    },
+    {
+      "id": "rag_cost_variation_3",
+      "question": "What are my out-of-pocket expenses?",
+      "expected_answer": "All parent costs",
+      "must_include": ["200"],
+      "must_not_include": ["$15k", "coach"],
+      "expected_audience": "parent",
+      "forbidden_source": "qa_pair", 
+      "category": "rag_capability",
+      "note": "Tests 'all costs' without exact Q&A match"
+    },
+    {
+      "id": "rag_insurance_variation",
+      "question": "Tell me about your insurance requirements",
+      "expected_answer": "Different based on audience",
+      "must_include": ["insurance"],
+      "forbidden_source": "qa_pair",
+      "category": "rag_capability",
+      "note": "Ambiguous - answer depends on audience"
+    },
+    {
+      "id": "rag_schedule_detail",
+      "question": "What time should I drop off my 6 year old?",
+      "expected_answer": "Should infer from age group schedule",
+      "must_include": ["4:00"],
+      "expected_audience": "parent",
+      "forbidden_source": "qa_pair",
+      "category": "rag_capability",
+      "note": "Requires inference from age to schedule"
+    },
+    {
+      "id": "rag_payment_timing",
+      "question": "When is tuition due each month?",
+      "expected_answer": "Payment timing details",
+      "must_include": ["5th"],
+      "expected_audience": "parent",
+      "forbidden_source": "qa_pair",
+      "category": "rag_capability",
+      "note": "Specific detail not in Q&A pairs"
+    },
+    {
+      "id": "real_world_confused_parent",
+      "question": "My daughter is 8, how much will this cost me total?",
+      "expected_answer": "Age-appropriate schedule and costs",
+      "must_include": ["200", "Monday", "Wednesday"],
+      "expected_audience": "parent",
+      "category": "real_world",
+      "note": "Combines age, schedule, and cost questions"
+    },
+    {
+      "id": "real_world_coach_startup",
+      "question": "I want to start a TSA school, what are the startup costs?",
+      "expected_answer": "Initial investment and ongoing costs",
+      "must_include": ["15", "4"],
+      "must_not_include": ["$200/month"],
+      "expected_audience": "coach",
+      "category": "real_world",
+      "note": "Natural coach question about getting started"
+    },
+    {
+      "id": "real_world_payment_options",
+      "question": "Do you take credit cards or just checks?",
+      "expected_answer": "Payment methods accepted",
+      "must_include": ["payment"],
+      "expected_audience": "parent",
+      "category": "real_world",
+      "note": "Common parent payment question"
+    },
+    {
+      "id": "audience_isolation_test",
+      "question": "Tell me everything about costs",
+      "expected_answer": "Must match audience completely",
+      "must_include": ["$"],
+      "category": "real_world",
+      "note": "Answer MUST be different for parent vs coach"
+    },
+    {
+      "id": "out_of_scope_basketball",
+      "question": "Do you have a basketball team?",
+      "expected_answer": "Not available",
+      "must_include": ["not available"],
+      "must_not_include": ["yes", "basketball", "team"],
+      "category": "real_world",
+      "note": "Should not hallucinate sports not offered"
+    },
+    {
+      "id": "edge_late_fee_ambiguous",
+      "question": "What happens if I'm late?",
+      "expected_answer": "Late pickup fee OR late payment fee",
+      "must_include": ["late"],
+      "category": "real_world",
+      "note": "Ambiguous - could mean pickup or payment"
+    },
+    {
+      "id": "quality_conciseness",
+      "question": "What's TSA?",
+      "expected_answer": "Brief, focused explanation",
+      "must_include": ["Texas Sports Academy"],
+      "max_words": 50,
+      "category": "real_world",
+      "note": "Should be concise, not verbose"
+    }
+  ],
+  "anti_gaming_rules": {
+    "forbidden_source_check": "If forbidden_source is set, test MUST fail if that source is used",
+    "variation_requirement": "RAG capability tests should use different phrasings than Q&A pairs",
+    "real_world_priority": "Real world tests are most important - they reflect actual usage"
+  }
+}

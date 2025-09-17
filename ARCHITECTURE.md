@@ -1,15 +1,21 @@
 # TSA Parent Assistant Architecture
 
 ## North Star
-**Parents get trusted answers in under 2 seconds without calling the school.**
+**TSA community gets trusted answers instantly - whether they're parents checking practice times or coaches starting schools.**
 
-## Parent Psychology Insights
+## Audience Psychology Insights
 
 ### The Parent Mindset
 - **Tech-forward**: Early adopters who chose innovative 2hr learning model
 - **Efficiency-focused**: Value instant access over phone calls
 - **Quality-expecting**: Used to Perplexity/ChatGPT level experiences
 - **Mobile-first**: 73% will use phones
+
+### The Coach Mindset (V2 consideration)
+- **Business-minded**: Evaluating partnership opportunity
+- **Risk-aware**: Need clarity on legal/financial requirements
+- **Detail-oriented**: Insurance, visa rules, territory rights matter
+- **Comparison-shopping**: "How is this different from a franchise?"
 
 ### How We Delight Them
 1. **Instant Access** → 1.5s responses (matches their expectations)
@@ -32,7 +38,7 @@
 
 ### 3. Smart RAG Pipeline
 - **Chunking**: 250 tokens with 50 overlap (focused topic chunks)
-- **Threshold**: 0.3 minimum confidence (lower due to semantic dilution)
+- **Threshold**: 0.3 minimum confidence (industry standard for RAG)
 - **Cache**: Top 20 questions pre-computed
 - **Why**: Handles 95% of queries at 1.5s
 
@@ -117,6 +123,20 @@ questions (
 )
 ```
 
+#### Q&A Pairs Table (Manual Overrides)
+```sql
+qa_pairs (
+  id uuid primary key default gen_random_uuid(),
+  question text not null,
+  answer text not null,
+  category text, -- 'logistics', 'real_estate', etc (V2)
+  audience text, -- 'coach', 'parent', 'both' (V2)
+  embedding vector(1536),
+  created_at timestamp default now(),
+  INDEX idx_qa_embedding USING hnsw (embedding vector_cosine_ops)
+)
+```
+
 ## RAG Implementation Details
 
 ### Retrieval Strategy
@@ -144,20 +164,25 @@ User Question → Embed → Vector Search
 
 ## Implementation Phases
 
-### Phase 1: Foundation (Week 1)
-1. Supabase setup + pgvector
-2. Document upload pipeline
-   - PDF parsing with overlap chunking
-   - Upload endpoint with drag-drop UI
-   - Initial handbook + FAQ ingestion
-3. Basic RAG API (streaming from day 1)
-4. Connect existing UI to real backend
+### Phase 1: Ship Simple (Days 1-3)
+1. Basic RAG API with single confidence threshold (0.3)
+2. Document upload for real TSA content
+3. Simple Q&A admin interface
+4. "I don't know" fallback with contact info
+5. Test with 80%+ accuracy target
 
-### Phase 2: Production (Week 2)
-1. Question analytics
-2. Feedback system
-3. Performance optimization
-4. Parent beta test
+### Phase 2: Measure & Iterate (Week 2+)
+Based on real usage data:
+- IF >30% coach questions → Add audience detection
+- IF >10% timeout errors → Optimize for speed
+- IF specific categories fail → Adjust thresholds
+- IF common questions repeat → Add caching
+
+### Phase 3: Optimize (After 1000 questions)
+- Category-specific confidence
+- Template responses
+- Advanced routing
+- Performance caching
 
 ## Optimization Choices
 
@@ -204,8 +229,27 @@ User Question → Embed → Vector Search
 - **Confidence**: "Sources prove it's accurate"
 - **Community**: "Easy to share with other parents"
 
+## Pragmatic Engineering Principles
+
+### Build Level 1 When
+- Simple solution handles 80% of cases ✓
+- Complexity can be added without refactoring ✓
+- Real usage will inform optimizations ✓
+
+### Skip Until Proven Needed
+- Audience detection (unless >50% confusion)
+- Category routing (unless clear patterns)
+- Complex confidence matrices (unless failures)
+
+### The Right Balance
+```
+Ship broken ❌ → Ship simple ✓
+Guess at features ❌ → Measure then build ✓
+Perfect on day 1 ❌ → Accurate with fallbacks ✓
+```
+
 ## The Insight
-Tech-forward parents expect AI excellence. Give them Perplexity-quality answers from school documents.
+Tech-forward parents expect AI excellence. Coaches need accurate business guidance. Give both Perplexity-quality answers with appropriate fallbacks.
 
 ---
 *"Ship simple. Measure everything. Only add complexity when data demands it."*

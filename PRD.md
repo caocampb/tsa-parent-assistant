@@ -1,10 +1,11 @@
-# TSA Parent Bot
+# TSA Assistant Bot
 
-A chatbot that answers parent questions instantly using Texas Sports Academy's documents.
+A Q&A system that helps both coaches and parents get instant, accurate answers about Texas Sports Academy.
 
 ## Problem
 
-Staff spend **10+ hours/week** answering repetitive questions. Parents wait hours for simple answers.
+**For Coaches**: Complex partnership questions about starting schools (insurance, legal structure, costs) require lengthy calls.
+**For Parents**: Staff spend **10+ hours/week** answering repetitive questions about schedules, fees, and logistics.
 
 ## Solution
 
@@ -19,11 +20,17 @@ AI chat that searches TSA documents and responds instantly. Available 24/7. No l
 If the answer isn't in the documents, bot says: *"I don't have that information."*
 
 **Example Questions**
-- "What time is practice?"
-- "What equipment do I need?"
-- "What's the refund policy?"
-- "How do I register my child?"
-- "What are the age groups?"
+
+*Parent Questions:*
+- "What time is practice for 7 year olds?"
+- "Where do I buy uniforms?"
+- "Can I carry over makeup classes?"
+
+*Coach Questions:*
+- "Is this a franchise?"
+- "What insurance do I need?"
+- "Can international students enroll with F-1 visas?"
+- "How does the $15k tuition split work?"
 
 **Zero Configuration** - Works out-of-the-box by recognizing universal patterns (schedules, policies, equipment lists) that every youth sports org shares.
 
@@ -38,8 +45,10 @@ If the answer isn't in the documents, bot says: *"I don't have that information.
 
 **Admin Panel** (for Lamar & Malekai)
 - Upload PDFs, Word docs, audio files
+- Add Q&A pairs directly (for edge cases)
 - Delete outdated documents
 - Password protected
+- Tag content by audience (coach/parent)
 
 ## Out of scope
 - User accounts
@@ -78,9 +87,14 @@ Vercel → Zero-config deployment with Edge Functions
 
 ## Success Metrics
 
-- **Accuracy**: 100% from documents only
-- **Speed**: < 3 seconds per answer
-- **Impact**: 90% fewer repetitive questions
+- **Accuracy**: 
+  - 95%+ on common questions (top 20)
+  - 80%+ overall accuracy
+  - 100% transparent about sources
+- **Speed**: < 3 seconds per answer (< 7s for complex)
+- **Impact**: 
+  - 70% fewer repetitive questions
+  - Clear escalation path for complex issues
 
 ## Timeline
 

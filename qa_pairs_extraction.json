@@ -1,0 +1,292 @@
+{
+  "qa_pairs": [
+    {
+      "question": "Who owns the school?",
+      "answer": "The coach owns the school. It's their school, they're just powered by Texas Sports Academy.",
+      "audience": "coach",
+      "category": "logistics"
+    },
+    {
+      "question": "Is this a franchise?",
+      "answer": "This is close to a franchise because we provide lots of support, you get to say '[School Name], a Texas Sports Academy', and we are fully invested in your school succeeding. But it's still not a franchise — you own your school. We are partnered through an affiliate partnership.",
+      "audience": "coach",
+      "category": "logistics"
+    },
+    {
+      "question": "How does insurance work?",
+      "answer": "You need CGL (commercial general liability) covering both school and sports activities, professional liability/errors & omissions, and property insurance. For the TBS option, try Great American Insurance Company and ask them to: 1) List both school activities and sports activities in the insured operations on the General Liability, and 2) Add an endorsement for professional liability onto the CGL. That'll meet TSA requirements & recommendations.",
+      "audience": "coach",
+      "category": "logistics"
+    },
+    {
+      "question": "How does incorporation work?",
+      "answer": "Coaches can incorporate as they like: For-Profit is easiest, Non-Profit can make real estate cheaper, 501c3 is fine too. It can be a standalone LLC (not subsidiary of TSA). We'll use a strong affiliate agreement so you get our accreditation that enables the EAO to recognize you as an accredited school and thus be eligible to receive payments.",
+      "audience": "coach",
+      "category": "logistics"
+    },
+    {
+      "question": "How should I pitch this to parents?",
+      "answer": "One option: Frame it as 'Alpha School does the academics' (show Fox News article), 'I lead the [X Activity]'. See sportsacademy.school/coach-marketing for updated information.",
+      "audience": "coach",
+      "category": "logistics"
+    },
+    {
+      "question": "What types of support is provided to facility owners during the initial setup of the school?",
+      "answer": "We help you recruit, help you find space, help you fill out forms, help you get started.",
+      "audience": "coach",
+      "category": "logistics"
+    },
+    {
+      "question": "What are the requirements for facility owners to run a school under the Alpha brand?",
+      "answer": "We're under the Texas Sports Academy brand. Key requirements: Deliver on three commitments, Facility tour, Background check, Complete guide training.",
+      "audience": "coach",
+      "category": "logistics"
+    },
+    {
+      "question": "Visa - can my child in South America attend TBS?",
+      "answer": "For a foreign student to legally attend a private K–12 school in the U.S., they normally need an F-1 student visa. F-1 visas are issued through the SEVP (Student and Exchange Visitor Program).",
+      "audience": "both",
+      "category": "logistics"
+    },
+    {
+      "question": "How to make school SEVP certified?",
+      "answer": "File Form I-17 (Petition for Approval of School for Attendance by Nonimmigrant Students) - you apply online through the SEVIS system.",
+      "audience": "coach",
+      "category": "logistics"
+    },
+    {
+      "question": "How much space is needed?",
+      "answer": "For morning class (from 9am - 11:30am): Assuming the microschool is 15 students, a classroom or coworking space that comfortably fits 15 students is all that's necessary. Generally 600-900 square feet is great. For afternoon sports practice (from 11:30am - 3:30pm): Space for sports training is needed. If the school is basketball focused, we've found a minimum of half court to be ample space for students to get their training in.",
+      "audience": "coach",
+      "category": "real_estate"
+    },
+    {
+      "question": "What times are will space be needed?",
+      "answer": "These are the times when certain spaces will be needed: 9am - 11:30am: Classroom / study space; 11:30am - 12:15pm: Area to eat lunch; 12:15pm - 3:30pm: Sports training space (basketball court, weightroom).",
+      "audience": "coach",
+      "category": "real_estate"
+    },
+    {
+      "question": "What does our facility need to have in order to host this program?",
+      "answer": "Space for classroom or study space that comfortably fits 15 students; Space for athletic training (such as basketball courts and/or weight room); Proper school zoning; Certificate of occupancy + comply with health, safety, and accessibility codes; Restrooms sized to occupancy + proper HVAC/electrical systems; (Ideally) Safe outdoor space for students to play outside.",
+      "audience": "coach",
+      "category": "real_estate"
+    },
+    {
+      "question": "Do they need any supplies besides a room?",
+      "answer": "The only supply students need is a laptop to operate the personalized learning software. This is something we ask parents to purchase (instead of having the school leader take these costs). Most parents purchase <$200 chromebooks for students to use for learning, which work perfectly well.",
+      "audience": "both",
+      "category": "real_estate"
+    },
+    {
+      "question": "Who would be responsible for the students while at my facility?",
+      "answer": "Texas Sports Academy is providing a platform that enables any coach or facility that dreams of running a school to be able to do so. We provide extensive resources and support (academic team, visiting guides, and more) to ensure your students absolutely thrive. Importantly though, the school will be your school, thus you would in effect be responsible for the students.",
+      "audience": "coach",
+      "category": "real_estate"
+    },
+    {
+      "question": "Do they need a permanent room or can they store their things onsite and we could use the space for other rentals over the weekends.",
+      "answer": "Students do not need a permanent room. The space can be used for other rentals over weekends.",
+      "audience": "coach",
+      "category": "real_estate"
+    },
+    {
+      "question": "How much internet speed do they need?",
+      "answer": "Greater than 100mbps is recommended.",
+      "audience": "coach",
+      "category": "real_estate"
+    },
+    {
+      "question": "What are the real estate costs at the Carrollton Campus?",
+      "answer": "Real estate = $3k per student.",
+      "audience": "coach",
+      "category": "real_estate"
+    },
+    {
+      "question": "How does accreditation work?",
+      "answer": "You are accredited through our affiliate agreement. Through our partnership, you get to borrow Alpha's Cognia accreditation. This is how we ensure the work your student's do is accredited. You'll need to deliver on academic outcomes, because our accreditation is our brand, and we take that seriously.",
+      "audience": "coach",
+      "category": "accreditation"
+    },
+    {
+      "question": "If the school is newly accredited, will all studies by students that first year 'count' as credits?",
+      "answer": "Yes, as soon as Cognia grants accreditation, any credits students earn from that date forward carry the full weight of coming from an accredited school.",
+      "audience": "both",
+      "category": "accreditation"
+    },
+    {
+      "question": "How does testing work?",
+      "answer": "We do MAP tests - norm-referenced — this is done three times a year. We do placement tests - criterion-based. This is modeled off the Texas STAAR. Students take placement tests at the very start to find their knowledge grade. They take placement tests each time they finish a grade level and must achieve >90% (our bar for mastery) to move on to the next grade level.",
+      "audience": "both",
+      "category": "academics"
+    },
+    {
+      "question": "Is it accredited? Do the credits transfer over?",
+      "answer": "It's all accredited. It's accredited by Cognia. All the credits from 2HL transfer over to other schools should a student want to return to public or private school.",
+      "audience": "both",
+      "category": "academics"
+    },
+    {
+      "question": "What other resources besides tutoring and zoom calls will be used to help support students with learning disabilities and diverse learning needs?",
+      "answer": "In regular school, when a student is behind, has a disability, or diverse learning needs, they are put on a personalized learning plan. Timeback is by nature 100% personalized. For dyslexia, we use Lalilo (phonics & reading program) and Clear Fluency (oral reading practice). We've had learners with disabilities succeed beyond expectations with 2 Hour Learning. Behind the scenes, Timeback's dedicated curriculum team reviews student data and guide feedback to pinpoint issues. The 2 Hour Learning team will then recommend the exact lessons and learning strategies for the student based on their learning needs. Our parent platform gives parents real-time visibility into their child's progress with automatic alerts if performance dips. Students have access to: Testing apps to track mastery, 10+ different Alpha created and the very best learning apps, daily progress reports, a goal-setting platform, productivity data, Visual model AI-tutor that tracks student's screen and suggests improvements, and Zoom virtual calls with human tutor.",
+      "audience": "parent",
+      "category": "academics"
+    },
+    {
+      "question": "How can parents get involved in student learning?",
+      "answer": "Parents get real-time access to the parent portal to monitor their child's mastery of a subject, their engagement levels, receive early-warning alerts if performance dips, and message coaches. Parents will see exactly where their child is thriving, where they may be struggling, and then be able to recommend evening homework assignments to get ahead or fill in the gaps.",
+      "audience": "parent",
+      "category": "academics"
+    },
+    {
+      "question": "Do we require students to take any tests before joining their school?",
+      "answer": "We do not, but when students start at your school we require them — as part of the academic curriculum — to take MAP (Measures of Academic Progress) tests three times a year to track their growth.",
+      "audience": "both",
+      "category": "academics"
+    },
+    {
+      "question": "How does tuition work? Can we set that?",
+      "answer": "Our partners all charge $15k tuition. That is our recommended price point. At $15k tuition, our fee is $4k. That fee includes: Access to Timeback software, Marketing support from the TSA team, Cognia Accreditation, Access to School Choice Vouchers. Note: For all other non-TSAs, the Timeback fee itself is $10,000. Our team has negotiated a special discount to bring this down, making our fee $4k.",
+      "audience": "coach",
+      "category": "tuition_payments"
+    },
+    {
+      "question": "What payment provider do you use?",
+      "answer": "We use Stripe connect — parents pay tuition via platform (there's a fee). We pay the $10k credit via ACH transfer (stripe has an ACH fee of $0.25). Coach connects their bank account (via Stripe connect). We collect necessary info (perhaps 501c3 — if so it discounts). Parents pay fees through hosted payment page / embedded form. Funds flow into the coach's connect account. So in short, we use Stripe (2.2% + $0.30 nonprofit rates) meaning you'll get paid 2.2% less.",
+      "audience": "coach",
+      "category": "tuition_payments"
+    },
+    {
+      "question": "How do payments work? How do coaches get paid?",
+      "answer": "These are paid out to coaches monthly. Our platform fee will be withheld. If you're running your school for 10 months and the tuition is $15k, that's $1500 a month. Given we charge $4k, you'd get paid $1100 a month per student. Payments are delivered immediately on student signing and the 1st of each month. Payments are sent through Stripe connect — they typically take 2-3 business days to arrive in the coaches bank account.",
+      "audience": "coach",
+      "category": "tuition_payments"
+    },
+    {
+      "question": "How do payments work? Do you pay everything upfront or monthly?",
+      "answer": "All payments — our scholarships + parent payments — flow through the payment system to ensure everything is synced up. This way you won't need to worry about setting up a new merchant account to get paid. We'll send over the payment monthly — our licensing fee will be withheld from your payments so you don't need to worry about paying us.",
+      "audience": "coach",
+      "category": "tuition_payments"
+    },
+    {
+      "question": "How do payouts work after a student pays and enrolls?",
+      "answer": "For every student that has paid tuition, you'll receive payouts on the 1st of each Month for 10 months. We'll initiate payouts the same day tuition is paid (typically takes 2-3 days to hit your bank account). For families that pay the full tuition, the payout will be based on the tuition minus our fee, divided by 10 months. The payout amount includes the parent paid tuition, our scholarship, and then academic software fee is withheld to avoid having to invoice back and forth.",
+      "audience": "coach",
+      "category": "tuition_payments"
+    },
+    {
+      "question": "How do the payments for the vouchers work?",
+      "answer": "Schools create the invoice for $10k, parent approves the invoice to give the EAO the 'yes' to dip into their ESA account and use their funds to pay the invoice.",
+      "audience": "coach",
+      "category": "vouchers_scholarships"
+    },
+    {
+      "question": "What are the specific requirements for parents to qualify for school choice vouchers?",
+      "answer": "Only 46,000 students are going to get the standard voucher. It's $1B over two years, $500M/year, $10,800 per student = ~46,000 vouchers. The priority goes from: Disability, low income group, middle income, anyone past $150k household income likely won't get the voucher.",
+      "audience": "both",
+      "category": "vouchers_scholarships"
+    },
+    {
+      "question": "How do taxes work for the scholarship payments?",
+      "answer": "We're doing an affiliate agreement, so this is a contractor relationship. We'll pay by bank/wire transfer — coach does their taxes (income & self-employment). Before we pay, we need each coach to fill out a W-9 (it gives us their tax ID). After the year ends, we need to file a 1099-NEC and send them a copy. We treat you as an independent contractor under our affiliate agreement. We'll pay you $10k/student by bank transfer straight, no withholding. You then handle your own taxes.",
+      "audience": "coach",
+      "category": "vouchers_scholarships"
+    },
+    {
+      "question": "For the scholarships/vouchers would that cover the entire school year and would they receive one each year?",
+      "answer": "In short, yes - one would be received each year. The Texas school choice vouchers are ~$10k and don't kick in until Fall 2026. For this year, Texas Sports Academy is providing scholarships that simulate these vouchers so coaches can start their schools this year. These scholarships are for this upcoming school year only. How it works is we ask our coaches to charge $15k tuition per student. When parents apply for your school, they will then be prompted to apply for a scholarship afterwards. If a parent receives a scholarship, they would only need to pay $5k instead of $10k to attend a school.",
+      "audience": "both",
+      "category": "vouchers_scholarships"
+    },
+    {
+      "question": "What is the criteria for each kid to qualify for the scholarship/voucher and would it fully cover the cost for them to attend?",
+      "answer": "There's no academic requirement to qualify for the voucher, students just need to submit a test score. The same applies for our scholarships for this upcoming school year. Tuition is $15k and the scholarship would cover $10.8k. Parents would need to pay the remaining $4.2k out of pocket. IMPORTANTLY - There's no guarantee that a family, even with disabilities or <$150k household income, will earn a voucher. So think of the voucher as a bonus.",
+      "audience": "both",
+      "category": "vouchers_scholarships"
+    },
+    {
+      "question": "For the kids that can't afford it are there any financial aid programs like in college?",
+      "answer": "Given we are providing scholarships, there are no financial aid programs at the moment. Coaches can offer financial aid out of their own revenue, but that is entirely up to the coach (our TSA fee remains the same). To explain the value for parents: By attending this type of sports school, players will get to train daily from 11:30am - 3:30pm. That's four extra hours of training they get each day while their competition is still in school. This equals 20 extra hours a week and 80 extra hours of training a month.",
+      "audience": "both",
+      "category": "vouchers_scholarships"
+    },
+    {
+      "question": "If I have students that can't afford to pay, can I reduce the price for them to $10k?",
+      "answer": "Yes, you can. It's your school, you can set the prices — that would just take away from your own profits.",
+      "audience": "coach",
+      "category": "vouchers_scholarships"
+    },
+    {
+      "question": "Can you provide some more depth on the eligibility for ESA payments through an affiliate agreement with TSA?",
+      "answer": "To be a preapproved ESA provider, a school must: Hold Texas Private School Accreditation Commission-recognized accreditation (Cognia works), Administer a nationally norm-referenced test to grades 3–12 each year (like the MAP Test), Have operated a campus continuously for two school years (like Alpha/TSA). Texas Sports Academy meets all three and is therefore an 'approved provider.' Any campus that signs our affiliate agreement automatically 'rides under' TSA's approval. ESA payments will be sent to TSA (as we're the 'approved provider'), and from there they will be forwarded to each affiliate school per our contract.",
+      "audience": "coach",
+      "category": "vouchers_scholarships"
+    },
+    {
+      "question": "Who will enter each student's approved accommodations into the testing system before test day? If a student with disabilities fails, will we have a committee (like an ARD) to decide whether they must retake the test or can be waived?",
+      "answer": "We will put their accommodations in the system if it has to do with additional time to take a test or the like. However, we don't have what the public school districts have as far as 'case manager, director of special education, speech therapist, ARD facilitator' goes. We have guides, that is all. The guides will work with the student to help them grow their abilities and complete all expected tasks.",
+      "audience": "both",
+      "category": "school_ops"
+    },
+    {
+      "question": "If a new student enrolls mid-semester (for example, later this week), do you have them take the MAP Growth test right away, or do you wait until the next testing window in the wintertime?",
+      "answer": "The student would still need to take the 25 minute screeners right away so we can accurately 'bracket' them for RIT score measurement and placement in Alpha Read/Alpha Write. The MAP Screener helps to provide an estimated placement.",
+      "audience": "coach",
+      "category": "school_ops"
+    },
+    {
+      "question": "Does Alpha School / 2 hour learning have a 'proof of enrollment' form that we can provide to our students?",
+      "answer": "Students may be able to use the VOE form for this purpose.",
+      "audience": "both",
+      "category": "school_ops"
+    },
+    {
+      "question": "What should the school schedule be?",
+      "answer": "For the schedule shell of 2HL, this is the general schedule that the Alpha campuses follow: 8:40: Dropoff, 8:45: Morning Launch, 9:00: 1st 2HL Block, 9:30: Break, 9:40: 2nd 2HL Block, 10:10: Break, 10:20: 3rd 2HL Block, 10:50: Break, 11:00: 4th 2HL Block, 11:30 — Lunch. If a student doesn't finish their studies during the morning block, they will study into the lunch break or get ahead after school.",
+      "audience": "both",
+      "category": "school_ops"
+    },
+    {
+      "question": "What furniture should I use?",
+      "answer": "I don't know the exact type of furniture or design but this Alpha HS tour shows their setup: https://vimeo.com/1100462332/d7e19f1154?fl=pl&fe=ti",
+      "audience": "coach",
+      "category": "school_ops"
+    },
+    {
+      "question": "Do you provide medication training for coaches? Is there a nurse on site?",
+      "answer": "We don't provide training for coaches to manage medications. Right now, we leave that to the coaches. We will soon be rolling out programs to ensure coaches are CPR certified — we'll be adding more structured medical support as we grow.",
+      "audience": "both",
+      "category": "school_ops"
+    },
+    {
+      "question": "Transcript / Diploma — what they can use if returning to a public school",
+      "answer": "Students will have a learning report on Dash showing their progress through the curriculum, their MAP test results, and their results on standardized grade-completion tests. They will be able to use these should they return to a public school.",
+      "audience": "both",
+      "category": "school_ops"
+    },
+    {
+      "question": "What age group should we specifically target?",
+      "answer": "We recommend hosting middle school ages (6-8th grade). This is when basketball parents are willing to try alternative education that is heavily sports-centric. That said, the age group is ultimately up to the coach or school leader. For example: If a coach knows he can get twelve 4th graders to enroll in his sports school, by all means go for it!",
+      "audience": "coach",
+      "category": "school_ops"
+    },
+    {
+      "question": "How many schools do you have?",
+      "answer": "As of Sept '25, 5 Texas Sports Academies, 25 Alpha Schools.",
+      "audience": "coach",
+      "category": "general_sales"
+    },
+    {
+      "question": "What other videos explain the academic model?",
+      "answer": "We recommend the 2 Hour Learning Deep Dive and White Paper to see the stats behind the learning model. This short video about the 'Teacher-in-front-of-the-classroom' model, as well as this 2 Hour School Day video, are very helpful as well.",
+      "audience": "coach",
+      "category": "general_sales"
+    },
+    {
+      "question": "What are the graduation requirements in Texas?",
+      "answer": "Private Schools are not regulated by Texas Education Agency - the state does not mandate grad requirements for private school students. We can set up any credit requirements we want for our academies. Colleges and NCAA still have expectations (e.g. courses taken and transcripts).",
+      "audience": "coach",
+      "category": "general_sales"
+    }
+  ]
+}

@@ -32,6 +32,7 @@ export function SearchBox({
   const [savedQuery, setSavedQuery] = useLocalStorage("tsa-search-draft", "");
   const [internalQuery, setInternalQuery] = useState(savedQuery);
   const [isFocused, setIsFocused] = useState(false);
+  const [audience, setAudience] = useLocalStorage<'parent' | 'coach'>("tsa-audience", "parent");
   const router = useRouter();
   
   const query = value !== undefined ? value : internalQuery;
@@ -61,15 +62,46 @@ export function SearchBox({
           .replace(/^-+|-+$/g, "")
           .slice(0, 50);
         
-        router.push(`/q/${slug}?q=${encodeURIComponent(query)}`);
+        router.push(`/q/${slug}?q=${encodeURIComponent(query)}&audience=${audience}`);
         setSavedQuery(""); // Clear saved draft after submission
       }
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className={cn("w-full", className)}>
-      <div
+    <div className={cn("w-full", className)}>
+      {/* Audience Toggle */}
+      <div className="flex justify-center mb-3">
+          <div className="inline-flex h-10 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
+            <button
+              type="button"
+              onClick={() => setAudience('parent')}
+              className={cn(
+                "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                audience === 'parent' 
+                  ? "bg-background text-foreground shadow-sm" 
+                  : "hover:bg-background/50 hover:text-foreground"
+              )}
+            >
+              I'm a Parent
+            </button>
+            <button
+              type="button"
+              onClick={() => setAudience('coach')}
+              className={cn(
+                "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                audience === 'coach' 
+                  ? "bg-background text-foreground shadow-sm" 
+                  : "hover:bg-background/50 hover:text-foreground"
+              )}
+            >
+              I'm a Coach
+            </button>
+          </div>
+        </div>
+      
+      <form onSubmit={handleSubmit}>
+        <div
         className={cn(
           "relative overflow-hidden transition-all duration-200 group",
           size === "large" ? "rounded-full" : "rounded-full",
@@ -147,12 +179,13 @@ export function SearchBox({
         </button>
       </div>
       
-      {/* Helper text for large search boxes */}
-      {size === "large" && showHelperText && (
-        <p className="mt-3 text-sm text-muted-foreground text-center">
-          Get instant answers about schedules, policies, registration, and more
-        </p>
-      )}
-    </form>
+        {/* Helper text for large search boxes */}
+        {size === "large" && showHelperText && (
+          <p className="mt-3 text-sm text-muted-foreground text-center">
+            Get instant answers about schedules, policies, registration, and more
+          </p>
+        )}
+      </form>
+    </div>
   );
 }

@@ -1,0 +1,66 @@
+COACH INFORMATION - TEXAS SPORTS ACADEMY
+
+Logistics:
+Who owns the school?
+The coach owns the school. It's their school, they're just powered by Texas Sports Academy.
+
+Is this a franchise?
+This is close to a franchise because:
+- We provide lots of support
+- You get to say "[School Name], a Texas Sports Academy"
+- We are fully invested in your school succeeding
+But it's still not a franchise — you own your school. We are partnered through an affiliate partnership.
+
+How does insurance work?
+Requires CGL (get it to cover the school and sports activities), ELL or professional omissions, property insurance.
+So one for TBS option to try to use Great American Insurance Company, letting them know you'll need:
+1. General liability - asking them to list both school activities and sports activities in the insured operations.
+2. Endorsement of professional liability - asking them to add this right onto the CGL.
+That'll meet the TSA requirements & recommendations.
+
+How does incorporation work?
+Coaches can incorporate as they like:
+For-Profit is easiest, Non-Profit can make real estate cheaper, 501c3 is fine too
+Can be a standalone LLC (not subsidiary of TSA). We'll use a strong affiliate agreement so you get our accreditation that enables the EAO to recognize you as an accredited school and thus be eligible to receive payments.
+
+Tuition & Payments:
+How does tuition work? Can we set that?
+Our partners all charge $15k tuition
+That is our recommended price point
+At $15k tuition, our fee is $4k
+That fee includes:
+- Access to Timeback software
+- Marketing support from the TSA team
+- Cognia Accreditation
+- Access to School Choice Vouchers
+Note: For all other non-TSAs, the Timeback fee itself is $10,000. Our team has negotiated a special discount to bring this down, making our fee $4k.
+
+What payment provider do you use?
+We use Stripe connect — parents pay tuition via platform (there's a fee). We pay the $10k credit via ACH transfer (stripe has an ACH fee of $0.25)
+Coach connects their bank account (via Stripe connect)
+Parents pay fees through hosted payment page / embedded form. Funds flow into the coach's connect account
+So in short, we use Stripe (2.2% + $0.30 nonprofit rates) meaning you'll get paid 2.2% less
+
+How do payments work? How do coaches get paid?
+These are paid out to coaches monthly. Our platform fee will be withheld.
+If you're running your school for 10 months and the tuition is $15k, that's $1500 a month. Given we charge $4k, you'd get paid $1100 a month per student.
+Payments are delivered immediately on student signing and the 1st of each month.
+Payments are sent through Stripe connect — they typically take 2-3 business days to arrive in the coaches bank account.
+
+Real Estate / Facility:
+How much space is needed?
+For morning class (from 9am - 11:30am): Assuming the microschool is 15 students, a classroom or coworking space that comfortably fits 15 students is all that's necessary. Generally 600-900 square feet is great.
+For afternoon sports practice (from 11:30am - 3:30pm): Space for sports training is needed. If the school is basketball focused, we've found a minimum of half court to be ample space for students to get their training in.
+
+What does our facility need to have in order to host this program?
+- Space for classroom or study space that comfortably fits 15 students
+- Space for athletic training (such as basketball courts and/or weight room)
+- Proper school zoning
+- Certificate of occupancy + comply with health, safety, and accessibility codes
+- Restrooms sized to occupancy + proper HVAC/electrical systems
+- (Ideally) Safe outdoor space for students to play outside
+
+Who would be responsible for the students while at my facility?
+Texas Sports Academy is providing a platform that enables any coach or facility that dreams of running a school to be able to do so. We provide extensive resources and support (academic team, visiting guides, and more) to ensure your students absolutely thrive. Importantly though, the school will be your school, thus you would in effect be responsible for the students.
+
+

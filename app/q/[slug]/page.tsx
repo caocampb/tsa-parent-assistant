@@ -22,6 +22,7 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
   const searchParams = useSearchParams();
   const router = useRouter();
   const question = searchParams.get("q") || "";
+  const audience = searchParams.get("audience") as 'parent' | 'coach' || 'parent';
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
@@ -41,18 +42,26 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
     
     const fetchAnswer = async () => {
       try {
-        // In production, replace this with actual API call
+        // Call the actual API
         const fetchWithRetry = async () => {
-          // Simulate API delay
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          const response = await fetch('/api/q', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+              question,
+              audience 
+            }),
+            signal: abortController.signal
+          });
           
-          // Simulate random failures for demo (remove in production)
-          if (Math.random() < 0.1) {
-            throw new Error('Network error');
+          if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
           }
           
-          const mockAnswer = mockAnswers[slug] || mockAnswers["fall-registration-dates"];
-          return mockAnswer;
+          const data = await response.json();
+          return data as Answer;
         };
 
         // Use retry logic with exponential backoff
@@ -640,22 +649,45 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                       }
                     }, 100);
                     
-                    // Simulate getting answer
-                    const answerTimer = setTimeout(() => {
-                      const slug = question
-                        .toLowerCase()
-                        .replace(/[^a-z0-9]+/g, "-")
-                        .replace(/^-+|-+$/g, "")
-                        .slice(0, 50);
-                      const mockAnswer = mockAnswers[slug] || mockAnswers["fall-registration-dates"];
-                      setConversationHistory(prev => 
-                        prev.map((item, idx) => 
-                          idx === prev.length - 1 
-                            ? { ...item, answer: mockAnswer, isLoading: false }
-                            : item
-                        )
-                      );
-                    }, 1500);
+                    // Get answer from API
+                    const fetchFollowUpAnswer = async () => {
+                      try {
+                        const response = await fetch('/api/q', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ 
+                            question: question,
+                            audience 
+                          })
+                        });
+                        
+                        if (!response.ok) {
+                          throw new Error(`API error: ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        setConversationHistory(prev => 
+                          prev.map((item, idx) => 
+                            idx === prev.length - 1 
+                              ? { ...item, answer: data as Answer, isLoading: false }
+                              : item
+                          )
+                        );
+                      } catch (error) {
+                        console.error('Error fetching follow-up answer:', error);
+                        setConversationHistory(prev => 
+                          prev.map((item, idx) => 
+                            idx === prev.length - 1 
+                              ? { ...item, answer: null, isLoading: false }
+                              : item
+                          )
+                        );
+                      }
+                    };
+                    
+                    fetchFollowUpAnswer();
 
                     // 3-second timeout handler
                     const timeoutTimer = setTimeout(() => {
