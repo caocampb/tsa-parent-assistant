@@ -242,3 +242,6 @@ GRANT EXECUTE ON FUNCTION search_documents_shared TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION search_qa_pairs TO anon, authenticated;
 
 
+
+
+

@@ -326,8 +326,8 @@ async function processFile(file: File, documentId: string): Promise<any[]> {
   const encoder = encoding_for_model('text-embedding-3-large');
   
   const splitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 250,       // Even smaller chunks for focused topics
-    chunkOverlap: 50,     // 50 tokens overlap
+    chunkSize: 512,       // Standard size for semantic completeness
+    chunkOverlap: 128,    // 25% overlap for context continuity
     separators: ['\n\n', '\n', '. ', ' ', ''],
     lengthFunction: (text: string) => {
       // Count exact tokens using the same encoding as our embedding model
