@@ -56,6 +56,7 @@ export default function QAAdminPage() {
   const [showIssuesModal, setShowIssuesModal] = useState(false);
   const [feedbackIssues, setFeedbackIssues] = useState<Array<{question: string, thumbs_down: number}>>([]);
   const [isLoadingIssues, setIsLoadingIssues] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   // Check authentication
   useEffect(() => {
@@ -206,12 +207,17 @@ export default function QAAdminPage() {
   }
 
   // Filtered Q&A pairs - newest first (Larson: what admins actually want)
-  const filteredQAPairs = qaPairs
+  const allFilteredPairs = qaPairs
     .filter(qa => 
       qa.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
       qa.answer.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  
+  // Show top 50 for performance (or all if searching or showAll clicked)
+  const filteredQAPairs = (searchQuery || showAll)
+    ? allFilteredPairs // Show all matches when searching or "Show all" clicked
+    : allFilteredPairs.slice(0, 50); // Otherwise just recent 50
 
   // Count by audience
   const audienceCounts = qaPairs.reduce((acc, qa) => {
@@ -301,7 +307,10 @@ export default function QAAdminPage() {
               type="text"
               placeholder="Search questions or answers..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowAll(false); // Reset when searching
+              }}
               className="pl-10"
               autoFocus
             />
@@ -310,7 +319,10 @@ export default function QAAdminPage() {
           {/* Audience Filter Pills */}
           <div className="flex items-center gap-2 text-sm">
             <button
-              onClick={() => setSelectedAudience('all')}
+              onClick={() => {
+                setSelectedAudience('all');
+                setShowAll(false);
+              }}
               className={cn(
                 "px-3 py-1.5 rounded-md transition-colors",
                 selectedAudience === 'all' 
@@ -322,7 +334,10 @@ export default function QAAdminPage() {
             </button>
             <span className="text-muted-foreground">·</span>
             <button
-              onClick={() => setSelectedAudience('parent')}
+              onClick={() => {
+                setSelectedAudience('parent');
+                setShowAll(false);
+              }}
               className={cn(
                 "px-3 py-1.5 rounded-md transition-colors",
                 selectedAudience === 'parent' 
@@ -334,7 +349,10 @@ export default function QAAdminPage() {
             </button>
             <span className="text-muted-foreground">·</span>
             <button
-              onClick={() => setSelectedAudience('coach')}
+              onClick={() => {
+                setSelectedAudience('coach');
+                setShowAll(false);
+              }}
               className={cn(
                 "px-3 py-1.5 rounded-md transition-colors",
                 selectedAudience === 'coach' 
@@ -346,7 +364,10 @@ export default function QAAdminPage() {
             </button>
             <span className="text-muted-foreground">·</span>
             <button
-              onClick={() => setSelectedAudience('both')}
+              onClick={() => {
+                setSelectedAudience('both');
+                setShowAll(false);
+              }}
               className={cn(
                 "px-3 py-1.5 rounded-md transition-colors",
                 selectedAudience === 'both' 
@@ -510,10 +531,28 @@ export default function QAAdminPage() {
 
               {/* Footer */}
               {filteredQAPairs.length > 0 && (
-                <div className="px-6 py-3 bg-muted/30 border-t">
+                <div className="px-6 py-3 bg-muted/30 border-t flex items-center justify-between">
                   <p className="text-xs text-muted-foreground">
-                    Showing {filteredQAPairs.length} of {qaPairs.length} Q&A pairs
+                    Showing {filteredQAPairs.length} of {allFilteredPairs.length} 
+                    {searchQuery ? ' matches' : ' Q&A pairs'}
+                    {!searchQuery && !showAll && allFilteredPairs.length > 50 && ' (newest 50 only)'}
                   </p>
+                  {!searchQuery && allFilteredPairs.length > 50 && !showAll && (
+                    <button
+                      onClick={() => setShowAll(true)}
+                      className="text-xs text-primary hover:underline transition-colors"
+                    >
+                      Show all {allFilteredPairs.length} →
+                    </button>
+                  )}
+                  {showAll && (
+                    <button
+                      onClick={() => setShowAll(false)}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Show recent 50 only
+                    </button>
+                  )}
                 </div>
               )}
             </>
@@ -521,10 +560,17 @@ export default function QAAdminPage() {
         </Card>
 
         {/* Keyboard shortcuts hint */}
-        <div className="mt-6 flex items-center gap-4 text-xs text-muted-foreground">
-          <span>Press <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">⌘K</kbd> for command menu</span>
-          <span>·</span>
-          <span><kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">⌘N</kbd> to add new Q&A</span>
+        <div className="mt-6 flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-4">
+            <span>Press <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">⌘K</kbd> for command menu</span>
+            <span>·</span>
+            <span><kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">⌘N</kbd> to add new Q&A</span>
+          </div>
+          {!searchQuery && allFilteredPairs.length > 50 && !showAll && (
+            <span className="text-muted-foreground">
+              Showing newest 50 only
+            </span>
+          )}
         </div>
       </main>
 
