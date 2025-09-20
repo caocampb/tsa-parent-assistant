@@ -24,10 +24,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusIcon, SearchIcon, MessageSquareIcon, Trash2Icon, Loader2Icon } from "lucide-react";
+import { PlusIcon, SearchIcon, MessageSquareIcon, Trash2Icon, Loader2Icon, AlertCircleIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from '@/lib/supabase';
 
 interface QAPair {
   id: string;
@@ -50,6 +51,11 @@ export default function QAAdminPage() {
   const [newAudience, setNewAudience] = useState<'parent' | 'coach' | 'both'>('parent');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  
+  // Phase 4: Check Issues states
+  const [showIssuesModal, setShowIssuesModal] = useState(false);
+  const [feedbackIssues, setFeedbackIssues] = useState<Array<{question: string, thumbs_down: number}>>([]);
+  const [isLoadingIssues, setIsLoadingIssues] = useState(false);
 
   // Check authentication
   useEffect(() => {
@@ -158,8 +164,40 @@ export default function QAAdminPage() {
         toast.error(error.error?.message || "Failed to delete Q&A pair");
       }
     } catch (error) {
-      console.error('Delete error:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Delete error:', error);
+      }
       toast.error("Failed to delete Q&A pair");
+    }
+  };
+  
+  // Phase 4: Check for problematic questions (Simplified per Will Larson)
+  const checkFeedbackIssues = async () => {
+    setIsLoadingIssues(true);
+    try {
+      const { data, error } = await supabase
+        .from('recent_feedback_issues')
+        .select('*')
+        .order('thumbs_down', { ascending: false });
+      
+      if (error) {
+        throw new Error('Run the SQL in sql/create-feedback-table.sql to create the view');
+      }
+      
+      setFeedbackIssues(data || []);
+      
+      if (!data || data.length === 0) {
+        toast.success("No issues this week! 🎉");
+      } else {
+        setShowIssuesModal(true);
+      }
+    } catch (err) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error checking feedback:', err);
+      }
+      toast.error(err instanceof Error ? err.message : "Unable to check feedback issues");
+    } finally {
+      setIsLoadingIssues(false);
     }
   };
 
@@ -220,10 +258,25 @@ export default function QAAdminPage() {
               Manage question and answer pairs for the chatbot
             </p>
           </div>
-          <Button className="gap-2" onClick={() => setShowAddModal(true)}>
-            <PlusIcon className="w-4 h-4" />
-            Add Q&A
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              className="gap-2"
+              onClick={checkFeedbackIssues}
+              disabled={isLoadingIssues}
+            >
+              {isLoadingIssues ? (
+                <Loader2Icon className="w-4 h-4 animate-spin" />
+              ) : (
+                <AlertCircleIcon className="w-4 h-4" />
+              )}
+              Check Issues
+            </Button>
+            <Button className="gap-2" onClick={() => setShowAddModal(true)}>
+              <PlusIcon className="w-4 h-4" />
+              Add Q&A
+            </Button>
+          </div>
         </div>
 
         {/* Filters Section */}
@@ -510,6 +563,55 @@ export default function QAAdminPage() {
               ) : (
                 "Add Q&A Pair"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Issues Dialog (Phase 4) */}
+      <Dialog open={showIssuesModal} onOpenChange={setShowIssuesModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Questions Getting Thumbs Down</DialogTitle>
+            <DialogDescription>
+              These questions need better answers. Click to add as Q&A pair.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {feedbackIssues.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                No issues found this week! 🎉
+              </p>
+            ) : (
+              feedbackIssues.map((issue, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    // Pre-fill the Q&A form
+                    setNewQuestion(issue.question);
+                    setNewAnswer("");
+                    setShowIssuesModal(false);
+                    setShowAddModal(true);
+                    toast.info(`Add a clear answer for: "${issue.question}"`);
+                  }}
+                  className="w-full text-left p-4 rounded-lg hover:bg-muted transition-colors border"
+                >
+                  <div className="font-medium">{issue.question}</div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    👎 {issue.thumbs_down} {issue.thumbs_down === 1 ? 'time' : 'times'} this week
+                  </div>
+                  <div className="text-xs text-blue-600 mt-2">
+                    → Click to add as Q&A pair
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowIssuesModal(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

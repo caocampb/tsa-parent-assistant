@@ -3,7 +3,7 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, use, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, ThumbsUpIcon, ThumbsDownIcon, ArrowDownIcon, CopyIcon, CheckIcon, ShareIcon } from "lucide-react";
+import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, ArrowDownIcon, CopyIcon, CheckIcon, ShareIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SearchBox } from "@/components/search/search-box";
 import { AppHeader } from "@/components/app-header";
@@ -16,6 +16,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { FeedbackButtons } from "@/components/feedback-buttons";
 
 export default function AnswerPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -32,6 +33,9 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
     }),
   });
   
+  // Store chunk metadata for feedback (Phase 3)
+  const [chunkMetadata, setChunkMetadata] = useState<Record<string, any>>({});
+  
   const [hasInitialized, setHasInitialized] = useState(false);
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
   const [feedbackPerMessage, setFeedbackPerMessage] = useState<Record<string, 'up' | 'down' | null>>({});
@@ -45,24 +49,45 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
   const [showFollowUpLoading, setShowFollowUpLoading] = useState(false);
   const [isWaitingForFollowUps, setIsWaitingForFollowUps] = useState(false);
 
-  // Debug logging
+  // Debug logging and extract chunk metadata
   useEffect(() => {
     const firstAssistant = messages.filter(m => m.role === 'assistant')[0];
     const hasFollowUps = firstAssistant?.parts?.some(p => p.type === 'data-followups');
     const assistantCount = messages.filter(m => m.role === 'assistant').length;
     
-    console.log('Chat debug:', {
-      messages: messages.length,
-      status,
-      error,
-      hasInitialized,
-      question,
-      assistantCount,
-      hasFollowUps,
-      isStreamingFirst: status === 'streaming' && assistantCount === 1
+    // Extract chunk metadata from messages (Phase 3)
+    messages.forEach((message, idx) => {
+      if (message.role === 'assistant') {
+        const chunkMetaPart = message.parts?.find(p => (p as any).type === 'chunk-metadata');
+        const metricsPart = message.parts?.find(p => (p as any).type === 'response-metrics');
+        
+        if (chunkMetaPart && 'data' in chunkMetaPart) {
+          const metadata = (chunkMetaPart as any).data;
+          if (metricsPart && 'data' in metricsPart) {
+            metadata.response_time_ms = (metricsPart as any).data.response_time_ms;
+          }
+          setChunkMetadata(prev => ({ ...prev, [message.id]: metadata }));
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Captured chunk metadata:', metadata);
+          }
+        }
+      }
     });
-    if (firstAssistant) {
-      console.log('First assistant parts:', firstAssistant.parts.map(p => ({ type: p.type, hasData: 'data' in p })));
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Chat debug:', {
+        messages: messages.length,
+        status,
+        error,
+        hasInitialized,
+        question,
+        assistantCount,
+        hasFollowUps,
+        isStreamingFirst: status === 'streaming' && assistantCount === 1
+      });
+      if (firstAssistant) {
+        console.log('First assistant parts:', firstAssistant.parts.map(p => ({ type: p.type, hasData: 'data' in p })));
+      }
     }
   }, [messages, status, error, hasInitialized, question]);
   
@@ -342,62 +367,18 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                 </TooltipContent>
               </Tooltip>
               <div className="w-px h-6 bg-border" />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => {
-                      const wasActive = feedback === 'up';
-                      setFeedback(wasActive ? null : 'up');
-                      if (!wasActive) {
-                        // Add a brief pulse animation
-                        const btn = document.getElementById('feedback-up');
-                        btn?.classList.add('animate-pulse');
-                        setTimeout(() => btn?.classList.remove('animate-pulse'), 600);
-                      }
-                    }}
-                    id="feedback-up"
-                    className={cn(
-                      "p-2 rounded-full transition-all duration-200 active:scale-95",
-                      feedback === 'up' 
-                        ? "bg-tsa-blue/10 text-tsa-blue scale-110 ring-2 ring-tsa-blue/20" 
-                        : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
-                    <ThumbsUpIcon className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>This was helpful</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => {
-                      const wasActive = feedback === 'down';
-                      setFeedback(wasActive ? null : 'down');
-                      if (!wasActive) {
-                        // Add a brief pulse animation
-                        const btn = document.getElementById('feedback-down');
-                        btn?.classList.add('animate-pulse');
-                        setTimeout(() => btn?.classList.remove('animate-pulse'), 600);
-                      }
-                    }}
-                    id="feedback-down"
-                    className={cn(
-                      "p-2 rounded-full transition-all duration-200 active:scale-95",
-                      feedback === 'down' 
-                        ? "bg-destructive/10 text-destructive scale-110 ring-2 ring-destructive/20" 
-                        : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
-                    <ThumbsDownIcon className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>This wasn't helpful</p>
-                </TooltipContent>
-              </Tooltip>
+              <FeedbackButtons
+                question={messages[0]?.parts.find(p => p.type === 'text')?.text || ''}
+                answer={messages[1]?.parts
+                  .filter(p => p.type === 'text')
+                  .map(p => p.text)
+                  .join('\n') || ''}
+                audience={audience}
+                messageId="main"
+                currentFeedback={feedback}
+                onFeedbackChange={setFeedback}
+                chunkMetadata={messages[1] ? chunkMetadata[messages[1].id] : undefined}
+              />
             </div>
 
             {/* Dynamic follow-up questions from AI */}
@@ -476,9 +457,11 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                         <button
                           key={i}
                           onClick={() => {
-                            console.log('Main related question clicked:', q);
-                            console.log('Current messages before send:', messages.length);
-                            console.log('Current status:', status);
+                            if (process.env.NODE_ENV === 'development') {
+                              console.log('Main related question clicked:', q);
+                              console.log('Current messages before send:', messages.length);
+                              console.log('Current status:', status);
+                            }
                             sendMessage({
                               role: 'user',
                               parts: [
@@ -603,60 +586,20 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                           )}
                           
                           <div className="w-px h-6 bg-border" />
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                  onClick={() => {
-                                    const newFeedback = feedbackPerMessage[assistantMessage.id] === 'up' ? null : 'up';
-                                    setFeedbackPerMessage(prev => ({ ...prev, [assistantMessage.id]: newFeedback }));
-                                    if (newFeedback === 'up') {
-                                      const btn = document.getElementById(`feedback-up-${assistantMessage.id}`);
-                                      btn?.classList.add('animate-pulse');
-                                      setTimeout(() => btn?.classList.remove('animate-pulse'), 600);
-                                    }
-                                  }}
-                                  id={`feedback-up-${assistantMessage.id}`}
-                                  className={cn(
-                                    "p-2 rounded-full transition-all duration-200 active:scale-95",
-                                    feedbackPerMessage[assistantMessage.id] === 'up' 
-                                      ? "bg-tsa-blue/10 text-tsa-blue scale-110 ring-2 ring-tsa-blue/20" 
-                                      : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                                  )}
-                                >
-                                  <ThumbsUpIcon className="h-4 w-4" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>This was helpful</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button
-                                  onClick={() => {
-                                    const newFeedback = feedbackPerMessage[assistantMessage.id] === 'down' ? null : 'down';
-                                    setFeedbackPerMessage(prev => ({ ...prev, [assistantMessage.id]: newFeedback }));
-                                    if (newFeedback === 'down') {
-                                      const btn = document.getElementById(`feedback-down-${assistantMessage.id}`);
-                                      btn?.classList.add('animate-pulse');
-                                      setTimeout(() => btn?.classList.remove('animate-pulse'), 600);
-                                    }
-                                  }}
-                                  id={`feedback-down-${assistantMessage.id}`}
-                                  className={cn(
-                                    "p-2 rounded-full transition-all duration-200 active:scale-95",
-                                    feedbackPerMessage[assistantMessage.id] === 'down' 
-                                      ? "bg-destructive/10 text-destructive scale-110 ring-2 ring-destructive/20" 
-                                      : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                                  )}
-                                >
-                                  <ThumbsDownIcon className="h-4 w-4" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>This wasn't helpful</p>
-                              </TooltipContent>
-                            </Tooltip>
+                          <FeedbackButtons
+                            question={userMessage.parts.find(p => p.type === 'text')?.text || ''}
+                            answer={assistantMessage.parts
+                              .filter(p => p.type === 'text')
+                              .map(p => p.text)
+                              .join('\n')}
+                            audience={audience}
+                            messageId={assistantMessage.id}
+                            currentFeedback={feedbackPerMessage[assistantMessage.id]}
+                            onFeedbackChange={(feedback) => 
+                              setFeedbackPerMessage(prev => ({ ...prev, [assistantMessage.id]: feedback }))
+                            }
+                            chunkMetadata={chunkMetadata[assistantMessage.id]}
+                          />
                           </div>
                         )}
                         
@@ -717,9 +660,11 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                                     <button
                                       key={i}
                                       onClick={() => {
-                                        console.log('Related question clicked:', q);
-                                        console.log('Current messages before send:', messages.length);
-                                        console.log('Current status:', status);
+                                        if (process.env.NODE_ENV === 'development') {
+                                          console.log('Related question clicked:', q);
+                                          console.log('Current messages before send:', messages.length);
+                                          console.log('Current status:', status);
+                                        }
                                         sendMessage({
                                           role: 'user',
                                           parts: [

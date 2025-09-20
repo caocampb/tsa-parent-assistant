@@ -507,6 +507,29 @@ Generate 3 relevant follow-up questions that a parent might ask next about TSA. 
   // 7. Generate answer from document chunks (RAG fallback) - Always stream
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
+      // Start timing the response
+      const startTime = Date.now();
+      
+      // Build chunk metadata for feedback tracking (Phase 3)
+      const chunkMetadata = {
+        chunk_ids: chunks.map(c => c.id),
+        chunk_scores: chunks.map(c => c.similarity || 0),
+        chunk_sources: chunks.map(c => {
+          // Determine source from table name or other metadata
+          if (c.table_name?.includes('parent')) return 'parent' as const;
+          if (c.table_name?.includes('coach')) return 'coach' as const;
+          return 'shared' as const;
+        }),
+        search_type: (useHybridSearch ? 'hybrid' : 'rag') as const,
+        confidence_score: topConfidence
+      };
+      
+      // Send chunk metadata first
+      writer.write({
+        type: 'chunk-metadata',
+        data: chunkMetadata
+      });
+      
       // Build messages array with conversation history if available
       const messages = [];
       
@@ -539,6 +562,15 @@ Generate 3 relevant follow-up questions that a parent might ask next about TSA. 
           }
         },
         onFinish: async ({ text }) => {
+            // Calculate response time
+            const responseTime = Date.now() - startTime;
+            
+            // Update chunk metadata with response time
+            writer.write({
+              type: 'response-metrics',
+              data: { response_time_ms: responseTime }
+            });
+            
             // After streaming completes, generate follow-up questions
             const conversationContext = body.messages && Array.isArray(body.messages) 
               ? `Previous conversation:\n${body.messages.map((m: any) => 
