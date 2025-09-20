@@ -62,15 +62,18 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
     
     // Initialize the chat with the initial question
     if (question && !hasInitialized) {
-      sendMessage({
-        role: 'user',
-        parts: [
-          {
-            type: 'text',
-            text: question,
-          }
-        ],
-      });
+      // Small delay to ensure smooth initial render
+      setTimeout(() => {
+        sendMessage({
+          role: 'user',
+          parts: [
+            {
+              type: 'text',
+              text: question,
+            }
+          ],
+        });
+      }, 100);
       setHasInitialized(true);
     }
   }, [question, sendMessage, hasInitialized]);
@@ -209,26 +212,12 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
 
         {/* Answer content - also in content container */}
         <div className="max-w-4xl mx-auto px-6">
-          <AnimatePresence mode="wait">
-            {(status === 'submitted' || (status === 'streaming' && messages.filter(m => m.role === 'assistant').length === 0)) ? (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="mb-8"
-              >
-                <AnswerSkeleton />
-              </motion.div>
-            ) : messages.filter(m => m.role === 'assistant').length > 0 ? (
-              <motion.div
-                key="answer"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className="space-y-8"
-              >
+          {(status === 'submitted' || (status === 'streaming' && messages.filter(m => m.role === 'assistant').length === 0)) ? (
+            <div className="mb-8">
+              <AnswerSkeleton />
+            </div>
+          ) : messages.filter(m => m.role === 'assistant').length > 0 ? (
+            <div className="space-y-8">
                 {/* Main answer - always show the FIRST assistant response */}
                 <div className="text-xl leading-[1.7] text-foreground mb-6">
                   {messages.filter(m => m.role === 'assistant')[0]?.parts.map((part, index) => {
@@ -744,21 +733,14 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                 }}
               />
             </div>
-          </motion.div>
+          </div>
         ) : error ? (
-          <motion.div
-            key="error"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="rounded-lg bg-destructive/10 p-6 text-center"
-          >
+          <div className="rounded-lg bg-destructive/10 p-6 text-center">
             <p className="text-sm text-destructive">
               Sorry, something went wrong. Please try again.
             </p>
-          </motion.div>
+          </div>
         ) : null}
-        </AnimatePresence>
         </div>
       </main>
 
