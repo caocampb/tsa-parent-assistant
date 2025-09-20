@@ -34,6 +34,7 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
   
   const [hasInitialized, setHasInitialized] = useState(false);
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
+  const [feedbackPerMessage, setFeedbackPerMessage] = useState<Record<string, 'up' | 'down' | null>>({});
   const [mounted, setMounted] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const mainRef = useRef<HTMLElement>(null);
@@ -521,6 +522,63 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                               </TooltipContent>
                             </Tooltip>
                           )}
+                          
+                          <div className="flex items-center gap-2 ml-auto">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => {
+                                    const newFeedback = feedbackPerMessage[assistantMessage.id] === 'up' ? null : 'up';
+                                    setFeedbackPerMessage(prev => ({ ...prev, [assistantMessage.id]: newFeedback }));
+                                    if (newFeedback === 'up') {
+                                      const btn = document.getElementById(`feedback-up-${assistantMessage.id}`);
+                                      btn?.classList.add('animate-pulse');
+                                      setTimeout(() => btn?.classList.remove('animate-pulse'), 600);
+                                    }
+                                  }}
+                                  id={`feedback-up-${assistantMessage.id}`}
+                                  className={cn(
+                                    "p-2 rounded-full transition-all duration-200 active:scale-95",
+                                    feedbackPerMessage[assistantMessage.id] === 'up' 
+                                      ? "bg-tsa-blue/10 text-tsa-blue scale-110 ring-2 ring-tsa-blue/20" 
+                                      : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                  )}
+                                >
+                                  <ThumbsUpIcon className="h-4 w-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>This was helpful</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => {
+                                    const newFeedback = feedbackPerMessage[assistantMessage.id] === 'down' ? null : 'down';
+                                    setFeedbackPerMessage(prev => ({ ...prev, [assistantMessage.id]: newFeedback }));
+                                    if (newFeedback === 'down') {
+                                      const btn = document.getElementById(`feedback-down-${assistantMessage.id}`);
+                                      btn?.classList.add('animate-pulse');
+                                      setTimeout(() => btn?.classList.remove('animate-pulse'), 600);
+                                    }
+                                  }}
+                                  id={`feedback-down-${assistantMessage.id}`}
+                                  className={cn(
+                                    "p-2 rounded-full transition-all duration-200 active:scale-95",
+                                    feedbackPerMessage[assistantMessage.id] === 'down' 
+                                      ? "bg-destructive/10 text-destructive scale-110 ring-2 ring-destructive/20" 
+                                      : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                  )}
+                                >
+                                  <ThumbsDownIcon className="h-4 w-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>This wasn't helpful</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
                         </div>
                         
                         {/* Show follow-up questions for this assistant message */}
