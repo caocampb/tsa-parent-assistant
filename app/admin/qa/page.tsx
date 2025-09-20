@@ -205,17 +205,30 @@ export default function QAAdminPage() {
     return null; // Will redirect to /admin
   }
 
-  // Filtered Q&A pairs
-  const filteredQAPairs = qaPairs.filter(qa => 
-    qa.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    qa.answer.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filtered Q&A pairs - newest first (Larson: what admins actually want)
+  const filteredQAPairs = qaPairs
+    .filter(qa => 
+      qa.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      qa.answer.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   // Count by audience
   const audienceCounts = qaPairs.reduce((acc, qa) => {
     acc[qa.audience] = (acc[qa.audience] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
+
+  // Highlight search matches (Vercel style)
+  const highlightMatch = (text: string, query: string) => {
+    if (!query) return text;
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return parts.map((part, i) => 
+      part.toLowerCase() === query.toLowerCase() 
+        ? `<mark class="bg-yellow-100 dark:bg-yellow-900/30 text-inherit rounded-sm px-0.5">${part}</mark>`
+        : part
+    ).join('');
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -290,6 +303,7 @@ export default function QAAdminPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
+              autoFocus
             />
           </div>
 
@@ -370,19 +384,40 @@ export default function QAAdminPage() {
             </div>
           ) : filteredQAPairs.length === 0 ? (
             <div className="p-12 text-center">
-              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                <MessageSquareIcon className="w-6 h-6 text-muted-foreground" />
+              <div className="relative">
+                <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                  <MessageSquareIcon className="w-8 h-8 text-muted-foreground/70" />
+                </div>
+                {searchQuery && (
+                  <div className="absolute -top-1 -right-1 left-0 mx-auto w-fit">
+                    <SearchIcon className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                )}
               </div>
-              <h3 className="text-sm font-medium text-foreground mb-1">No Q&A pairs found</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {searchQuery ? "Try adjusting your search" : "Get started by adding your first Q&A pair"}
+              <h3 className="text-base font-medium text-foreground mb-1">
+                {searchQuery ? 'No matches found' : 'No Q&A pairs yet'}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+                {searchQuery 
+                  ? `No Q&A pairs match "${searchQuery}". Try a different search term.`
+                  : "Help parents and coaches get instant answers by adding Q&A pairs."}
               </p>
-              {!searchQuery && (
-                <Button onClick={() => setShowAddModal(true)} className="gap-2">
-                  <PlusIcon className="w-4 h-4" />
-                  Add Q&A Pair
-                </Button>
-              )}
+              <div className="flex items-center justify-center gap-3">
+                {searchQuery ? (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setSearchQuery('')}
+                    className="gap-2"
+                  >
+                    Clear search
+                  </Button>
+                ) : (
+                  <Button onClick={() => setShowAddModal(true)} className="gap-2">
+                    <PlusIcon className="w-4 h-4" />
+                    Add your first Q&A
+                  </Button>
+                )}
+              </div>
             </div>
           ) : (
             <>
@@ -405,17 +440,34 @@ export default function QAAdminPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredQAPairs.map((qa) => (
-                      <TableRow key={qa.id} className="group">
+                    {filteredQAPairs.map((qa) => {
+                      const isNew = new Date(qa.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                      return (
+                      <TableRow key={qa.id} className="group transition-colors duration-150 hover:bg-muted/50">
                         <TableCell className="font-medium pl-6">
-                          <div className="truncate pr-4" title={qa.question}>
-                            {qa.question}
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="truncate pr-4" 
+                              title={qa.question}
+                              dangerouslySetInnerHTML={{ 
+                                __html: highlightMatch(qa.question, searchQuery) 
+                              }}
+                            />
+                            {isNew && (
+                              <span className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400 rounded-md font-medium">
+                                NEW
+                              </span>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="truncate pr-4 text-muted-foreground" title={qa.answer}>
-                            {qa.answer}
-                          </div>
+                          <div 
+                            className="truncate pr-4 text-muted-foreground" 
+                            title={qa.answer}
+                            dangerouslySetInnerHTML={{ 
+                              __html: highlightMatch(qa.answer, searchQuery) 
+                            }}
+                          />
                         </TableCell>
                         <TableCell>
                           <Badge
@@ -450,7 +502,8 @@ export default function QAAdminPage() {
                           </Button>
                         </TableCell>
                     </TableRow>
-                  ))}
+                  );
+                  })}
                   </TableBody>
                 </Table>
               </div>
