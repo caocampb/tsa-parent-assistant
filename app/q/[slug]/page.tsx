@@ -42,6 +42,20 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
   const [lastCopyId, setLastCopyId] = useState<string>('');
   const isMobile = useIsMobile();
 
+  // Debug logging
+  useEffect(() => {
+    console.log('Chat debug:', {
+      messages: messages.length,
+      status,
+      error,
+      hasInitialized,
+      question
+    });
+    if (messages.length > 0) {
+      console.log('First assistant message:', messages.find(m => m.role === 'assistant'));
+    }
+  }, [messages, status, error, hasInitialized, question]);
+
   useEffect(() => {
     setMounted(true);
     
@@ -178,7 +192,7 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
         {/* Answer content - also in content container */}
         <div className="max-w-4xl mx-auto px-6">
           <AnimatePresence mode="wait">
-            {messages.length === 0 && (status === 'submitted' || status === 'streaming') ? (
+            {(status === 'submitted' || (status === 'streaming' && messages.filter(m => m.role === 'assistant').length === 0)) ? (
               <motion.div
                 key="loading"
                 initial={{ opacity: 0 }}
@@ -200,12 +214,13 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                 {/* Main answer - always show the FIRST assistant response */}
                 <div className="text-xl leading-[1.7] text-foreground mb-6">
                   {messages.filter(m => m.role === 'assistant')[0]?.parts.map((part, index) => {
-                    if (part.type === 'text') {
+                    if (part.type === 'text' && 'text' in part) {
+                      const text = (part as any).text || '';
                       return (
                         <div 
                           key={index}
                           dangerouslySetInnerHTML={{ 
-                            __html: part.text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
+                            __html: text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
                           }} 
                         />
                       );
@@ -336,7 +351,60 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
               </Tooltip>
             </div>
 
-
+            {/* Dynamic follow-up questions from AI */}
+            {(() => {
+              // Find follow-up questions in data parts
+              let followUpQuestions: string[] | undefined;
+              
+              // Check the FIRST assistant message for data parts (keeps them stable)
+              const firstAssistantMessage = messages.filter(m => m.role === 'assistant')[0];
+              if (firstAssistantMessage && firstAssistantMessage.parts) {
+                for (const part of firstAssistantMessage.parts) {
+                  // Check for data parts containing follow-up questions
+                  if (part.type === 'data-followups' && 'data' in part) {
+                    const data = (part as any).data;
+                    if (data?.questions && Array.isArray(data.questions)) {
+                      followUpQuestions = data.questions;
+                      break;
+                    }
+                  }
+                }
+              }
+              
+              if (followUpQuestions && followUpQuestions.length > 0) {
+                return (
+                  <div className="mt-10">
+                    <h3 className="text-xs font-semibold text-muted-foreground tracking-wider uppercase mb-4">
+                      Related Questions
+                    </h3>
+                    <div className="space-y-3">
+                      {followUpQuestions.map((q: string, i: number) => (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            sendMessage({
+                              role: 'user',
+                              parts: [
+                                {
+                                  type: 'text',
+                                  text: q,
+                                }
+                              ],
+                            });
+                            scrollToBottom();
+                          }}
+                          className="flex items-center gap-3 w-full text-left px-4 py-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
+                        >
+                          <ChevronDownIcon className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                          <span className="text-sm text-foreground">{q}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
             {/* Show follow-up conversations (skip the initial Q&A) */}
             {messages.length > 2 && (
@@ -370,6 +438,117 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                             <span className="inline-block w-1 h-5 bg-foreground/50 animate-pulse ml-1" />
                           )}
                         </div>
+                        
+                        {/* Action buttons for this answer */}
+                        <div className="flex items-center gap-2 mt-6 pt-6 border-t">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => {
+                                  const copyId = `answer-${assistantMessage.id}`;
+                                  const textParts = assistantMessage.parts
+                                    .filter(p => p.type === 'text')
+                                    .map(p => p.text)
+                                    .join('\n');
+                                  handleCopy(textParts, copyId);
+                                  setLastCopyId(copyId);
+                                }}
+                                className={cn(
+                                  "p-2 rounded-full transition-all duration-200 active:scale-95",
+                                  copiedIds.has(`answer-${assistantMessage.id}`)
+                                    ? "bg-green-500/10 text-green-600"
+                                    : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                )}
+                                aria-label="Copy answer"
+                              >
+                                {copiedIds.has(`answer-${assistantMessage.id}`) ? (
+                                  <CheckIcon className="h-4 w-4" />
+                                ) : (
+                                  <CopyIcon className="h-4 w-4" />
+                                )}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{copiedIds.has(`answer-${assistantMessage.id}`) ? "Copied!" : "Copy answer"}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          {mounted && navigator.share && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => {
+                                    const userText = userMessage.parts.find(p => p.type === 'text')?.text || '';
+                                    const textParts = assistantMessage.parts
+                                      .filter(p => p.type === 'text')
+                                      .map(p => p.text)
+                                      .join('\n');
+                                    handleShare(userText, textParts);
+                                  }}
+                                  className="p-2 rounded-full transition-all duration-200 active:scale-95 bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                  aria-label="Share this Q&A"
+                                >
+                                  <ShareIcon className="h-4 w-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Share this Q&A</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                        
+                        {/* Show follow-up questions for this assistant message */}
+                        {(() => {
+                          let followUpQuestions: string[] | undefined;
+                          
+                          // Check this specific assistant message for follow-ups
+                          if (assistantMessage && assistantMessage.parts) {
+                            for (const part of assistantMessage.parts) {
+                              if (part.type === 'data-followups' && 'data' in part) {
+                                const data = (part as any).data;
+                                if (data?.questions && Array.isArray(data.questions)) {
+                                  followUpQuestions = data.questions;
+                                  break;
+                                }
+                              }
+                            }
+                          }
+                          
+                          if (followUpQuestions && followUpQuestions.length > 0) {
+                            return (
+                              <div className="mt-6">
+                                <h3 className="text-xs font-semibold text-muted-foreground tracking-wider uppercase mb-3">
+                                  Related Questions
+                                </h3>
+                                <div className="space-y-2">
+                                  {followUpQuestions.map((q: string, i: number) => (
+                                    <button
+                                      key={i}
+                                      onClick={() => {
+                                        sendMessage({
+                                          role: 'user',
+                                          parts: [
+                                            {
+                                              type: 'text',
+                                              text: q,
+                                            }
+                                          ],
+                                        });
+                                        scrollToBottom();
+                                      }}
+                                      className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors group text-sm"
+                                    >
+                                      <ChevronDownIcon className="h-3 w-3 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0" />
+                                      <span className="text-foreground/90">{q}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     );
                   }
