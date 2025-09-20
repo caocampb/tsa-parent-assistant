@@ -212,7 +212,7 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
 
         {/* Answer content - also in content container */}
         <div className="max-w-4xl mx-auto px-6">
-          {(status === 'submitted' || (status === 'streaming' && messages.filter(m => m.role === 'assistant').length === 0)) ? (
+          {messages.filter(m => m.role === 'assistant').length === 0 && (status === 'submitted' || status === 'streaming') ? (
             <div className="mb-8">
               <AnswerSkeleton />
             </div>
