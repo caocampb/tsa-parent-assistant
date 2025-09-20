@@ -37,7 +37,7 @@
 - **Cost**: $52/month acceptable for quality
 
 ### 3. Smart RAG Pipeline
-- **Chunking**: 250 tokens with 50 overlap (focused topic chunks)
+- **Chunking**: 512 tokens with 128 overlap (better for conversational content)
 - **Threshold**: 0.3 minimum confidence (industry standard for RAG)
 - **Cache**: Top 20 questions pre-computed
 - **Why**: Handles 95% of queries at 1.5s

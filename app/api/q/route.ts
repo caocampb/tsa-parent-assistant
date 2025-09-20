@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { openai } from '@ai-sdk/openai';
-import { streamText } from 'ai';
+import { streamText, generateObject, createUIMessageStream, createUIMessageStreamResponse, convertToModelMessages } from 'ai';
+import { z } from 'zod';
 import OpenAI from 'openai';
 import { supabase } from '@/lib/supabase';
 import { getSystemPrompt, getQAPrompt } from '@/lib/prompts';
@@ -145,6 +146,11 @@ function calculateKeywordOverlap(question: string, content: string): number {
   return questionKeywords.size > 0 ? overlap / questionKeywords.size : 0;
 }
 
+// Schema for follow-up questions
+const followUpQuestionsSchema = z.object({
+  questions: z.array(z.string()).length(3).describe('Exactly 3 follow-up questions')
+});
+
 export async function POST(request: NextRequest) {
   const body = await request.json();
   
@@ -249,27 +255,73 @@ export async function POST(request: NextRequest) {
   if (bestQAMatch && bestQAMatch.similarity >= 0.75) {
     const qaAnswer = bestQAMatch.answer;
     
-    // Always stream the Q&A answer with minimal reasoning for fast response
-    const result = await streamText({
-      model: openai('gpt-5-mini'),
-      messages: [
-        {
-          role: 'system',
+    // Create a UI message stream for Q&A response
+    const stream = createUIMessageStream({
+      execute: async ({ writer }) => {
+        // Build messages array with conversation history if available
+        const messages = [];
+        
+        // Add system prompt
+        messages.push({
+          role: 'system' as const,
           content: getQAPrompt()
-        },
-        {
-          role: 'user',
+        });
+        
+        // If we have conversation history, convert and include it
+        if (body.messages && Array.isArray(body.messages)) {
+          const historicalMessages = convertToModelMessages(body.messages.slice(0, -1)); // All but the last message
+          messages.push(...historicalMessages);
+        }
+        
+        // Add the Q&A answer
+        messages.push({
+          role: 'user' as const,
           content: qaAnswer
-        }
-      ],
-      providerOptions: {
-        openai: {
-          reasoning_effort: 'minimal',
-          textVerbosity: 'low'
-        }
-      }
+        });
+        
+        // Stream the Q&A answer
+        const result = streamText({
+          model: openai('gpt-5-mini'),
+          messages,
+          providerOptions: {
+            openai: {
+              reasoning_effort: 'minimal',
+              textVerbosity: 'low'
+            }
+          },
+          onFinish: async () => {
+            // After streaming completes, generate follow-up questions
+            const conversationContext = body.messages && Array.isArray(body.messages) 
+              ? `Previous conversation:\n${body.messages.map((m: any) => 
+                  `${m.role}: ${m.parts?.find((p: any) => p.type === 'text')?.text || m.content || ''}`
+                ).join('\n')}\n\n`
+              : '';
+              
+            const { object } = await generateObject({
+              model: openai('gpt-5-mini'),
+              schema: followUpQuestionsSchema,
+              prompt: `${conversationContext}Based on this TSA Q&A exchange:
+Question: "${question}"
+Answer: "${qaAnswer}"
+
+Generate 3 relevant follow-up questions that a parent might ask next about TSA. Don't repeat questions that were already asked in the conversation.`,
+            });
+            
+            // Write follow-up questions as a data part
+            writer.write({
+              type: 'data-followups',
+              id: 'followups-1',
+              data: object,
+            });
+          },
+        });
+        
+        // Merge the text stream
+        writer.merge(result.toUIMessageStream());
+      },
     });
-    return (result as any).toUIMessageStreamResponse();
+    
+    return createUIMessageStreamResponse({ stream });
   }
   
   // 5. Fall back to RAG: Use hybrid search for better accuracy
@@ -422,50 +474,101 @@ export async function POST(request: NextRequest) {
         firstChunk: chunks[0].content.substring(0, 200) + '...'
       });
     }
-    // Stream the fallback message
-    const result = await streamText({
-      model: openai('gpt-5-mini'),
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a helpful assistant. Provide the following message exactly as written.'
-        },
-        {
-          role: 'user',
-          content: getFallbackMessage(question, audience)
-        }
-      ],
-      providerOptions: {
-        openai: {
-          reasoning_effort: 'minimal',
-          textVerbosity: 'low'
-        }
-      }
+    // Stream the fallback message (no follow-ups for fallback)
+    const stream = createUIMessageStream({
+      execute: async ({ writer }) => {
+        const result = streamText({
+          model: openai('gpt-5-mini'),
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a helpful assistant. Provide the following message exactly as written.'
+            },
+            {
+              role: 'user',
+              content: getFallbackMessage(question, audience)
+            }
+          ],
+          providerOptions: {
+            openai: {
+              reasoning_effort: 'minimal',
+              textVerbosity: 'low'
+            }
+          }
+        });
+        
+        writer.merge(result.toUIMessageStream());
+      },
     });
-    return (result as any).toUIMessageStreamResponse();
+    
+    return createUIMessageStreamResponse({ stream });
   }
   
   // 7. Generate answer from document chunks (RAG fallback) - Always stream
-  const result = await streamText({
-    model: openai('gpt-5-mini'),
-    messages: [
-      {
-        role: 'system',
+  const stream = createUIMessageStream({
+    execute: async ({ writer }) => {
+      // Build messages array with conversation history if available
+      const messages = [];
+      
+      // Add system prompt
+      messages.push({
+        role: 'system' as const,
         content: getSystemPrompt(audience)
-      },
-      {
-        role: 'user',
+      });
+      
+      // If we have conversation history, convert and include it
+      if (body.messages && Array.isArray(body.messages)) {
+        const historicalMessages = convertToModelMessages(body.messages.slice(0, -1)); // All but the last message
+        messages.push(...historicalMessages);
+      }
+      
+      // Add the current question with context
+      messages.push({
+        role: 'user' as const,
         content: `Context:\n${chunks.map(c => c.content).join('\n\n')}\n\nQuestion: ${question}`
-      }
-    ],
-    providerOptions: {
-      openai: {
-        reasoning_effort: 'low',
-        textVerbosity: 'low'
-      }
-    }
+      });
+      
+      // Stream the RAG answer
+      const result = streamText({
+        model: openai('gpt-5-mini'),
+        messages,
+        providerOptions: {
+          openai: {
+            reasoning_effort: 'low',
+            textVerbosity: 'low'
+          }
+        },
+        onFinish: async ({ text }) => {
+            // After streaming completes, generate follow-up questions
+            const conversationContext = body.messages && Array.isArray(body.messages) 
+              ? `Previous conversation:\n${body.messages.map((m: any) => 
+                  `${m.role}: ${m.parts?.find((p: any) => p.type === 'text')?.text || m.content || ''}`
+                ).join('\n')}\n\n`
+              : '';
+              
+            const { object } = await generateObject({
+              model: openai('gpt-5-mini'),
+              schema: followUpQuestionsSchema,
+              prompt: `${conversationContext}Based on this TSA-related exchange:
+Question: "${question}"
+Answer: "${text}"
+
+Generate 3 relevant follow-up questions that a ${audience} might ask next about TSA. Don't repeat questions that were already asked in the conversation.`,
+            });
+            
+            // Write follow-up questions as a data part
+            writer.write({
+              type: 'data-followups',
+              id: 'followups-1',
+              data: object,
+            });
+          },
+      });
+      
+      // Merge the text stream
+      writer.merge(result.toUIMessageStream());
+    },
   });
   
-  // Use toUIMessageStreamResponse from the prototype
-  return (result as any).toUIMessageStreamResponse();
+  return createUIMessageStreamResponse({ stream });
 }

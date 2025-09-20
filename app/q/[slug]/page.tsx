@@ -42,20 +42,43 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
   const [copiedIds, setCopiedIds] = useState<Set<string>>(new Set());
   const [lastCopyId, setLastCopyId] = useState<string>('');
   const isMobile = useIsMobile();
+  const [showFollowUpLoading, setShowFollowUpLoading] = useState(false);
+  const [isWaitingForFollowUps, setIsWaitingForFollowUps] = useState(false);
 
   // Debug logging
   useEffect(() => {
+    const firstAssistant = messages.filter(m => m.role === 'assistant')[0];
+    const hasFollowUps = firstAssistant?.parts?.some(p => p.type === 'data-followups');
+    const assistantCount = messages.filter(m => m.role === 'assistant').length;
+    
     console.log('Chat debug:', {
       messages: messages.length,
       status,
       error,
       hasInitialized,
-      question
+      question,
+      assistantCount,
+      hasFollowUps,
+      isStreamingFirst: status === 'streaming' && assistantCount === 1
     });
-    if (messages.length > 0) {
-      console.log('First assistant message:', messages.find(m => m.role === 'assistant'));
+    if (firstAssistant) {
+      console.log('First assistant parts:', firstAssistant.parts.map(p => ({ type: p.type, hasData: 'data' in p })));
     }
   }, [messages, status, error, hasInitialized, question]);
+  
+  // Track when we finish streaming and are waiting for follow-ups
+  useEffect(() => {
+    const firstAssistant = messages.filter(m => m.role === 'assistant')[0];
+    const hasFollowUps = firstAssistant?.parts?.some(p => p.type === 'data-followups');
+    const assistantCount = messages.filter(m => m.role === 'assistant').length;
+    
+    // If we just finished streaming the first message and don't have follow-ups yet
+    if (status === 'ready' && assistantCount === 1 && firstAssistant && !hasFollowUps) {
+      setIsWaitingForFollowUps(true);
+    } else if (hasFollowUps || assistantCount > 1) {
+      setIsWaitingForFollowUps(false);
+    }
+  }, [messages, status]);
 
   useEffect(() => {
     setMounted(true);
@@ -212,12 +235,27 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
 
         {/* Answer content - also in content container */}
         <div className="max-w-4xl mx-auto px-6">
-          {messages.filter(m => m.role === 'assistant').length === 0 && (status === 'submitted' || status === 'streaming') ? (
-            <div className="mb-8">
-              <AnswerSkeleton />
-            </div>
-          ) : messages.filter(m => m.role === 'assistant').length > 0 ? (
-            <div className="space-y-8">
+          {(() => {
+            // Check if we have an assistant message with actual text content
+            const firstAssistant = messages.filter(m => m.role === 'assistant')[0];
+            const hasTextContent = firstAssistant?.parts?.some(p => p.type === 'text' && (p as any).text);
+            
+            // Show skeleton if:
+            // 1. No assistant messages yet, OR
+            // 2. Assistant message exists but has no text content yet (still initializing)
+            // 3. And we're in a loading state or just initialized
+            const shouldShowSkeleton = (!firstAssistant || !hasTextContent) && 
+              (status === 'submitted' || status === 'streaming' || (!hasInitialized && question));
+            
+            if (shouldShowSkeleton) {
+              return (
+                <div className="mb-8">
+                  <AnswerSkeleton />
+                </div>
+              );
+            } else if (firstAssistant && hasTextContent) {
+              return (
+                <div className="space-y-8">
                 {/* Main answer - always show the FIRST assistant response */}
                 <div className="text-xl leading-[1.7] text-foreground mb-6">
                   {messages.filter(m => m.role === 'assistant')[0]?.parts.map((part, index) => {
@@ -382,27 +420,44 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                 }
               }
               
-              // Show loading state only AFTER streaming is done but before follow-ups arrive
-              const isWaitingForFollowUps = status !== 'streaming' && messages.filter(m => m.role === 'assistant').length === 1 && !followUpQuestions;
+              // Show loading state after streaming but before follow-ups
+              // For the main answer, we show loading if:
+              // 1. We have the first assistant message
+              // 2. No follow-ups yet
+              // 3. Either not streaming at all OR streaming a later message (not the first)
+              const isStreamingFirstMessage = status === 'streaming' && messages.filter(m => m.role === 'assistant').length === 1;
+              const shouldShowLoading = (firstAssistantMessage && !followUpQuestions && !isStreamingFirstMessage) || isWaitingForFollowUps;
               
-              if (isWaitingForFollowUps) {
+              // Log for debugging
+              if (firstAssistantMessage) {
+                console.log('Main follow-up state:', {
+                  hasFirstAssistant: !!firstAssistantMessage,
+                  hasFollowUps: !!followUpQuestions,
+                  isStreamingFirst: isStreamingFirstMessage,
+                  isWaitingForFollowUps,
+                  shouldShowLoading,
+                  status
+                });
+              }
+              
+              if (shouldShowLoading) {
                 return (
                   <div className="mt-10">
                     <h3 className="text-xs font-semibold text-muted-foreground tracking-wider uppercase mb-4">
                       Related Questions
                     </h3>
-                    <div className="flex items-center gap-1.5 px-4">
-                      {/* Single row of three pulsing dots */}
+                    <div className="flex items-center gap-2 px-4">
+                      {/* Single row of three pulsing dots - made larger for visibility */}
                       <div
-                        className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-pulse"
+                        className="w-2.5 h-2.5 bg-muted-foreground/50 rounded-full animate-pulse"
                         style={{ animationDelay: '0ms' }}
                       />
                       <div
-                        className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-pulse"
+                        className="w-2.5 h-2.5 bg-muted-foreground/50 rounded-full animate-pulse"
                         style={{ animationDelay: '200ms' }}
                       />
                       <div
-                        className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-pulse"
+                        className="w-2.5 h-2.5 bg-muted-foreground/50 rounded-full animate-pulse"
                         style={{ animationDelay: '400ms' }}
                       />
                     </div>
@@ -430,15 +485,7 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                                 }
                               ],
                             });
-                            // Smooth scroll to show the new Q&A pair
-                            setTimeout(() => {
-                              if (mainRef.current) {
-                                mainRef.current.scrollTo({
-                                  top: mainRef.current.scrollHeight,
-                                  behavior: 'smooth'
-                                });
-                              }
-                            }, 100);
+                            // Auto-scroll during streaming will handle the scrolling
                           }}
                           className="flex items-center gap-3 w-full text-left px-4 py-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
                         >
@@ -544,10 +591,10 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                             </Tooltip>
                           )}
                           
-                          <div className="flex items-center gap-2 ml-auto">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button
+                          <div className="w-px h-6 bg-border" />
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
                                   onClick={() => {
                                     const newFeedback = feedbackPerMessage[assistantMessage.id] === 'up' ? null : 'up';
                                     setFeedbackPerMessage(prev => ({ ...prev, [assistantMessage.id]: newFeedback }));
@@ -600,7 +647,6 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                               </TooltipContent>
                             </Tooltip>
                           </div>
-                        </div>
                         
                         {/* Show follow-up questions for this assistant message */}
                         {(() => {
@@ -630,17 +676,17 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                                   Related Questions
                                 </h3>
                                 <div className="flex items-center gap-1.5 px-3">
-                                  {/* Single row of three pulsing dots */}
+                                  {/* Single row of three pulsing dots - smaller for conversation history */}
                                   <div
-                                    className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-pulse"
+                                    className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-pulse"
                                     style={{ animationDelay: '0ms' }}
                                   />
                                   <div
-                                    className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-pulse"
+                                    className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-pulse"
                                     style={{ animationDelay: '200ms' }}
                                   />
                                   <div
-                                    className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-pulse"
+                                    className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-pulse"
                                     style={{ animationDelay: '400ms' }}
                                   />
                                 </div>
@@ -668,15 +714,7 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                                             }
                                           ],
                                         });
-                                        // Smooth scroll to show the new Q&A pair
-                                        setTimeout(() => {
-                                          if (mainRef.current) {
-                                            mainRef.current.scrollTo({
-                                              top: mainRef.current.scrollHeight,
-                                              behavior: 'smooth'
-                                            });
-                                          }
-                                        }, 100);
+                                        // Auto-scroll during streaming will handle the scrolling
                                       }}
                                       className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors group text-sm"
                                     >
@@ -700,12 +738,12 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
             
 
             {/* Follow-up section */}
-            <div className="pt-10 mt-8 border-t follow-up-section">
+            <div className="pt-10 mt-8 border-t follow-up-section flex justify-center">
               <SearchBox 
                 placeholder="Ask a follow-up question" 
                 showAvatar={true}
                 showAudienceToggle={false}
-                className="max-w-2xl"
+                className="max-w-2xl w-full"
                 showHelperText={false}
                 size="default"
                 onSubmit={(followUpQuestion) => {
@@ -719,28 +757,17 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                         }
                       ],
                     });
-                    
-                    // Scroll to bottom after adding new question
-                    setTimeout(() => {
-                      if (mainRef.current) {
-                        mainRef.current.scrollTo({
-                          top: mainRef.current.scrollHeight,
-                          behavior: 'smooth'
-                        });
-                      }
-                    }, 100);
+                    // Auto-scroll during streaming will handle the scrolling
                   }
                 }}
               />
             </div>
-          </div>
-        ) : error ? (
-          <div className="rounded-lg bg-destructive/10 p-6 text-center">
-            <p className="text-sm text-destructive">
-              Sorry, something went wrong. Please try again.
-            </p>
-          </div>
-        ) : null}
+                </div>
+              );
+            } else {
+              return null;
+            }
+          })()}
         </div>
       </main>
 

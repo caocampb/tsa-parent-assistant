@@ -502,6 +502,9 @@ async function processFile(file: File, documentId: string, audience: string = 'p
     }
   }
 
+  // Free the encoder to prevent memory leaks
+  encoder.free();
+
   return chunkRecords;
 }
 
