@@ -30,42 +30,7 @@ export function AnswerSkeleton() {
         <div className="h-10 w-10 rounded-full bg-muted animate-pulse animation-delay-150" />
       </motion.div>
 
-            {/* Related questions skeleton - shows header immediately with loading dots */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-              className="mt-10"
-            >
-              {/* Header appears immediately */}
-              <h3 className="text-xs font-semibold text-muted-foreground tracking-wider uppercase mb-4">
-                Related Questions
-              </h3>
-              <div className="space-y-3">
-                {/* Three pulsing dots that will be replaced by actual questions */}
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg bg-muted/20"
-                  >
-                    <div className="flex items-center gap-1">
-                      <div
-                        className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-pulse"
-                        style={{ animationDelay: `${i * 200}ms` }}
-                      />
-                      <div
-                        className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-pulse"
-                        style={{ animationDelay: `${i * 200 + 200}ms` }}
-                      />
-                      <div
-                        className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-pulse"
-                        style={{ animationDelay: `${i * 200 + 400}ms` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
+            {/* Related questions skeleton removed - only shows after streaming is done */}
     </div>
   );
 }

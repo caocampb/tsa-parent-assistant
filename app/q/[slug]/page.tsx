@@ -245,10 +245,14 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                     }
                     return null;
                   })}
-                  {/* Show a subtle cursor at the end while still streaming the first response */}
-                  {status === 'streaming' && messages.filter(m => m.role === 'assistant').length === 1 && (
-                    <span className="inline-block w-1 h-5 bg-foreground/50 animate-pulse ml-1" />
-                  )}
+                  {/* Show a subtle cursor at the end while still streaming the first response (but not if we already have follow-up questions) */}
+                  {(() => {
+                    const firstAssistant = messages.filter(m => m.role === 'assistant')[0];
+                    const hasFollowUps = firstAssistant?.parts?.some(p => p.type === 'data-followups');
+                    return status === 'streaming' && messages.filter(m => m.role === 'assistant').length === 1 && !hasFollowUps && (
+                      <span className="inline-block w-1 h-5 bg-foreground/50 animate-pulse ml-1" />
+                    );
+                  })()}
                 </div>
 
             {/* Feedback and action buttons */}
@@ -389,37 +393,29 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                 }
               }
               
-              // Show loading state if we're still streaming the first response and haven't received follow-ups yet
-              const isStreamingFirstResponse = status === 'streaming' && messages.filter(m => m.role === 'assistant').length === 1 && !followUpQuestions;
+              // Show loading state only AFTER streaming is done but before follow-ups arrive
+              const isWaitingForFollowUps = status !== 'streaming' && messages.filter(m => m.role === 'assistant').length === 1 && !followUpQuestions;
               
-              if (isStreamingFirstResponse) {
+              if (isWaitingForFollowUps) {
                 return (
                   <div className="mt-10">
                     <h3 className="text-xs font-semibold text-muted-foreground tracking-wider uppercase mb-4">
                       Related Questions
                     </h3>
-                    <div className="space-y-3">
-                      {[0, 1, 2].map((i) => (
-                        <div
-                          key={i}
-                          className="flex items-center gap-3 px-4 py-3 rounded-lg bg-muted/30"
-                        >
-                          <div className="flex items-center gap-1">
-                            <div
-                              className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-pulse"
-                              style={{ animationDelay: `${i * 200}ms` }}
-                            />
-                            <div
-                              className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-pulse"
-                              style={{ animationDelay: `${i * 200 + 200}ms` }}
-                            />
-                            <div
-                              className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-pulse"
-                              style={{ animationDelay: `${i * 200 + 400}ms` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
+                    <div className="flex items-center gap-1.5 px-4">
+                      {/* Single row of three pulsing dots */}
+                      <div
+                        className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-pulse"
+                        style={{ animationDelay: '0ms' }}
+                      />
+                      <div
+                        className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-pulse"
+                        style={{ animationDelay: '200ms' }}
+                      />
+                      <div
+                        className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-pulse"
+                        style={{ animationDelay: '400ms' }}
+                      />
                     </div>
                   </div>
                 );
@@ -636,35 +632,28 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                             }
                           }
                           
-                          // Show loading state if this is the last message and we're still streaming
-                          if (isCurrentlyStreaming && !followUpQuestions) {
+                          // Show loading state only AFTER streaming is done for this message
+                          const isMessageDoneStreaming = !(status === 'streaming' && isLastMessage);
+                          if (isMessageDoneStreaming && isLastMessage && !followUpQuestions) {
                             return (
                               <div className="mt-6">
                                 <h3 className="text-xs font-semibold text-muted-foreground tracking-wider uppercase mb-3">
                                   Related Questions
                                 </h3>
-                                <div className="space-y-2">
-                                  {[0, 1, 2].map((i) => (
-                                    <div
-                                      key={i}
-                                      className="flex items-center gap-3 px-3 py-2 rounded-lg bg-muted/20"
-                                    >
-                                      <div className="flex items-center gap-1">
-                                        <div
-                                          className="w-1.5 h-1.5 bg-muted-foreground/30 rounded-full animate-pulse"
-                                          style={{ animationDelay: `${i * 200}ms` }}
-                                        />
-                                        <div
-                                          className="w-1.5 h-1.5 bg-muted-foreground/30 rounded-full animate-pulse"
-                                          style={{ animationDelay: `${i * 200 + 200}ms` }}
-                                        />
-                                        <div
-                                          className="w-1.5 h-1.5 bg-muted-foreground/30 rounded-full animate-pulse"
-                                          style={{ animationDelay: `${i * 200 + 400}ms` }}
-                                        />
-                                      </div>
-                                    </div>
-                                  ))}
+                                <div className="flex items-center gap-1.5 px-3">
+                                  {/* Single row of three pulsing dots */}
+                                  <div
+                                    className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-pulse"
+                                    style={{ animationDelay: '0ms' }}
+                                  />
+                                  <div
+                                    className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-pulse"
+                                    style={{ animationDelay: '200ms' }}
+                                  />
+                                  <div
+                                    className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-pulse"
+                                    style={{ animationDelay: '400ms' }}
+                                  />
                                 </div>
                               </div>
                             );
