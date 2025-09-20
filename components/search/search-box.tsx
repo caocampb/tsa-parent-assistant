@@ -13,6 +13,7 @@ interface SearchBoxProps {
   autoFocus?: boolean;
   showHelperText?: boolean;
   showAvatar?: boolean;
+  showAudienceToggle?: boolean;
   value?: string;
   onValueChange?: (value: string) => void;
   onSubmit?: (value: string) => void;
@@ -25,6 +26,7 @@ export function SearchBox({
   autoFocus = false,
   showHelperText = true,
   showAvatar = false,
+  showAudienceToggle = true,
   value,
   onValueChange,
   onSubmit
@@ -71,7 +73,8 @@ export function SearchBox({
   return (
     <div className={cn("w-full", className)}>
       {/* Audience Toggle */}
-      <div className="flex justify-center mb-3">
+      {showAudienceToggle && (
+        <div className="flex justify-center mb-3">
           <div className="inline-flex h-10 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
             <button
               type="button"
@@ -99,6 +102,7 @@ export function SearchBox({
             </button>
           </div>
         </div>
+      )}
       
       <form onSubmit={handleSubmit}>
         <div

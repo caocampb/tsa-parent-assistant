@@ -20,7 +20,7 @@ interface UploadZoneProps {
 
 export function UploadZone({ 
   onUpload, 
-  accept = ".pdf,.docx,.doc,.mp3,.m4a",
+  accept = ".pdf,.docx,.doc,.txt,.mp3,.m4a,.wav",
   maxSize = 10 * 1024 * 1024, // 10MB
   multiple = true 
 }: UploadZoneProps) {
@@ -55,7 +55,18 @@ export function UploadZone({
     }
 
     if (validFiles.length > 0) {
-      setFiles(validFiles);
+      // Convert to plain objects with File properties we need
+      const fileObjects = validFiles.map(file => ({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified,
+        _file: file, // Keep original File object for upload
+        progress: undefined,
+        speed: undefined,
+        timeRemaining: undefined
+      }));
+      setFiles(fileObjects as any);
     }
   }, [maxSize]);
 
@@ -90,6 +101,7 @@ export function UploadZone({
       
       for (let i = 0; i < uploadFiles.length; i++) {
         const file = uploadFiles[i];
+        const fileSize = file?.size || 0;
         const startTime = Date.now();
         
         // Simulate upload progress
@@ -97,8 +109,8 @@ export function UploadZone({
           await new Promise(resolve => setTimeout(resolve, 100));
           
           const elapsed = (Date.now() - startTime) / 1000;
-          const speed = (file.size * (progress / 100)) / elapsed;
-          const remaining = ((file.size - (file.size * (progress / 100))) / speed);
+          const speed = (fileSize * (progress / 100)) / elapsed;
+          const remaining = ((fileSize - (fileSize * (progress / 100))) / speed);
           
           setFiles(prev => prev.map((f, idx) => 
             idx === i ? {
@@ -113,7 +125,9 @@ export function UploadZone({
       
       // Complete upload
       setTimeout(() => {
-        onUpload(files);
+        // Extract original File objects
+        const originalFiles = files.map(f => (f as any)._file || f).filter(Boolean);
+        onUpload(originalFiles);
         setFiles([]);
         setIsUploading(false);
       }, 500);
@@ -161,7 +175,7 @@ export function UploadZone({
               {isDragging ? "Release to upload" : "Drop files or click to browse"}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              PDF, DOCX, MP3, M4A • Max 10MB
+              PDF, DOCX, TXT, MP3, M4A • Max 10MB
             </p>
           </div>
         </div>
@@ -188,14 +202,15 @@ export function UploadZone({
                 <div className="flex items-center gap-3 min-w-0">
                   <div className={cn(
                     "flex items-center justify-center w-8 h-8 rounded-md",
-                    file.type.includes("pdf") ? "bg-red-50 text-red-600" :
-                    file.type.includes("audio") ? "bg-purple-50 text-purple-600" :
+                    (file?.type?.includes("pdf") || file?.name?.endsWith(".pdf")) ? "bg-red-50 text-red-600" :
+                    (file?.type?.includes("audio") || file?.name?.match(/\.(mp3|m4a|wav)$/i)) ? "bg-purple-50 text-purple-600" :
+                    (file?.name?.endsWith(".txt")) ? "bg-green-50 text-green-600" :
                     "bg-blue-50 text-blue-600"
                   )}>
                     <FileIcon className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{file.name}</p>
+                    <p className="text-sm font-medium truncate">{file?.name || 'Unknown file'}</p>
                     {file.progress !== undefined && file.progress < 100 ? (
                       <div className="mt-1 space-y-1">
                         <div className="flex items-center justify-between text-xs text-muted-foreground">

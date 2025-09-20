@@ -44,7 +44,7 @@ export default function Home() {
       </main>
       
       <footer className="py-6 text-center text-sm text-gray-500 relative z-10">
-        <p>© 2024 Texas Sports Academy. All rights reserved.</p>
+        <p>© 2025 Texas Sports Academy. All rights reserved.</p>
       </footer>
     </div>
   );

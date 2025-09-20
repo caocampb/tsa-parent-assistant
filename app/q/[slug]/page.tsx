@@ -7,14 +7,14 @@ import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, ThumbsUpIcon, ThumbsDow
 import { cn } from "@/lib/utils";
 import { SearchBox } from "@/components/search/search-box";
 import { AppHeader } from "@/components/app-header";
-import { mockAnswers, type Answer, type Question } from "@/lib/types";
-import { TypingIndicator } from "@/components/typing-indicator";
+// Removed old types - using AI SDK v5 UIMessage instead
 import { AnswerSkeleton } from "@/components/answer-skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCopyToClipboard } from "usehooks-ts";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { retryWithBackoff, isRetryableError } from "@/lib/retry";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function AnswerPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -23,90 +23,42 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
   const router = useRouter();
   const question = searchParams.get("q") || "";
   const audience = searchParams.get("audience") as 'parent' | 'coach' || 'parent';
-  const [answer, setAnswer] = useState<Answer | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
+  
+  // Use the AI SDK's useChat hook for streaming
+  const { messages, sendMessage, status, error } = useChat({
+    transport: new DefaultChatTransport({
+      api: '/api/q',
+      body: { audience },
+    }),
+  });
+  
+  const [hasInitialized, setHasInitialized] = useState(false);
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
-  const [conversationHistory, setConversationHistory] = useState<Array<{question: string; answer: Answer | null; isLoading: boolean}>>([]);
-  const [followUpInput, setFollowUpInput] = useState("");
   const [mounted, setMounted] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const mainRef = useRef<HTMLElement>(null);
   const [_, copyToClipboard] = useCopyToClipboard();
   const [copiedIds, setCopiedIds] = useState<Set<string>>(new Set());
+  const [lastCopyId, setLastCopyId] = useState<string>('');
   const isMobile = useIsMobile();
 
   useEffect(() => {
     setMounted(true);
-    let abortController = new AbortController();
     
-    const fetchAnswer = async () => {
-      try {
-        // Call the actual API
-        const fetchWithRetry = async () => {
-          const response = await fetch('/api/q', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-              question,
-              audience 
-            }),
-            signal: abortController.signal
-          });
-          
-          if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
-          }
-          
-          const data = await response.json();
-          return data as Answer;
-        };
-
-        // Use retry logic with exponential backoff
-        const answer = await retryWithBackoff(
-          () => Promise.race([
-            fetchWithRetry(),
-            new Promise<never>((_, reject) => 
-              setTimeout(() => reject(new Error('Timeout')), 3000)
-            )
-          ]),
+    // Initialize the chat with the initial question
+    if (question && !hasInitialized) {
+      sendMessage({
+        role: 'user',
+        parts: [
           {
-            maxAttempts: 2,
-            initialDelay: 500,
-            onRetry: (attempt) => {
-              console.log(`Retrying... Attempt ${attempt}`);
-            }
+            type: 'text',
+            text: question,
           }
-        );
-        
-        if (!abortController.signal.aborted) {
-          setAnswer(answer);
-          setIsLoading(false);
-        }
-      } catch (error) {
-        if (!abortController.signal.aborted) {
-          // Show timeout message
-          setAnswer({
-            id: 'timeout',
-            questionId: 'timeout',
-            content: "I'm having trouble getting that information right now. Please try again or contact TSA directly at (555) 123-4567.",
-            sources: [],
-            relatedQuestions: [],
-            updatedAt: new Date()
-          });
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchAnswer();
-
-    return () => {
-      abortController.abort();
-    };
-  }, [slug]);
+        ],
+      });
+      setHasInitialized(true);
+    }
+  }, [question, sendMessage, hasInitialized]);
 
   // Handle scroll position for scroll-to-bottom button
   useEffect(() => {
@@ -158,12 +110,8 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
     }
   };
 
-  const handleShare = async (question: string, answer: Answer) => {
-    const shareText = `Q: ${question}\n\nA: ${answer.content.replace(/\*\*(.*?)\*\*/g, '$1')}\n\n${
-      answer.sources.length > 0 
-        ? `Sources:\n${answer.sources.map(s => `• ${s.title}${s.pageNumber ? ` (p. ${s.pageNumber})` : ''}`).join('\n')}`
-        : ''
-    }`;
+  const handleShare = async (question: string, answerText: string) => {
+    const shareText = `Q: ${question}\n\nA: ${answerText}`;
 
     // Check if Web Share API is available (mobile)
     if (navigator.share) {
@@ -200,7 +148,7 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
       {/* Fixed left sidebar for back button */}
       <div className="fixed left-0 top-0 bottom-0 w-20 pt-24 pl-4">
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push('/')}
           className={cn(
             "flex items-center justify-center bg-muted/50 text-foreground hover:bg-foreground/10 hover:text-foreground rounded-full transition-all duration-200",
             isMobile ? "w-12 h-12" : "w-10 h-10"
@@ -230,7 +178,7 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
         {/* Answer content - also in content container */}
         <div className="max-w-4xl mx-auto px-6">
           <AnimatePresence mode="wait">
-            {isLoading ? (
+            {messages.length === 0 && (status === 'submitted' || status === 'streaming') ? (
               <motion.div
                 key="loading"
                 initial={{ opacity: 0 }}
@@ -241,7 +189,7 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
               >
                 <AnswerSkeleton />
               </motion.div>
-            ) : answer ? (
+            ) : messages.filter(m => m.role === 'assistant').length > 0 ? (
               <motion.div
                 key="answer"
                 initial={{ opacity: 0, y: 10 }}
@@ -249,30 +197,53 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                 transition={{ duration: 0.3, ease: "easeOut" }}
                 className="space-y-8"
               >
-                {/* Main answer */}
+                {/* Main answer - always show the FIRST assistant response */}
                 <div className="text-xl leading-[1.7] text-foreground mb-6">
-                  <div 
-                    dangerouslySetInnerHTML={{ 
-                      __html: answer.content.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>') 
-                    }} 
-                  />
+                  {messages.filter(m => m.role === 'assistant')[0]?.parts.map((part, index) => {
+                    if (part.type === 'text') {
+                      return (
+                        <div 
+                          key={index}
+                          dangerouslySetInnerHTML={{ 
+                            __html: part.text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
+                          }} 
+                        />
+                      );
+                    }
+                    return null;
+                  })}
+                  {/* Show a subtle cursor at the end while still streaming the first response */}
+                  {status === 'streaming' && messages.filter(m => m.role === 'assistant').length === 1 && (
+                    <span className="inline-block w-1 h-5 bg-foreground/50 animate-pulse ml-1" />
+                  )}
                 </div>
 
             {/* Feedback and action buttons */}
-            <div className="flex items-center gap-2 pb-6 border-b">
+            <div className="flex items-center gap-2 pb-6">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    onClick={() => handleCopy(answer.content, answer.id)}
+                    onClick={() => {
+                      const firstAssistantMessage = messages.filter(m => m.role === 'assistant')[0];
+                      if (firstAssistantMessage) {
+                        const copyId = `answer-main`;
+                        const textParts = firstAssistantMessage.parts
+                          .filter(p => p.type === 'text')
+                          .map(p => p.text)
+                          .join('\n');
+                        handleCopy(textParts, copyId);
+                        setLastCopyId(copyId);
+                      }
+                    }}
                     className={cn(
                       "p-2 rounded-full transition-all duration-200 active:scale-95",
-                      copiedIds.has(answer.id)
+                      copiedIds.has('answer-main')
                         ? "bg-green-500/10 text-green-600"
                         : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                     aria-label="Copy answer"
                   >
-                    {copiedIds.has(answer.id) ? (
+                    {copiedIds.has('answer-main') ? (
                       <CheckIcon className="h-4 w-4" />
                     ) : (
                       <CopyIcon className="h-4 w-4" />
@@ -280,13 +251,22 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{copiedIds.has(answer.id) ? "Copied!" : "Copy answer"}</p>
+                  <p>{copiedIds.has('answer-main') ? "Copied!" : "Copy answer"}</p>
                 </TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    onClick={() => handleShare(question, answer)}
+                    onClick={() => {
+                      const firstAssistantMessage = messages.filter(m => m.role === 'assistant')[0];
+                      if (firstAssistantMessage) {
+                        const textParts = firstAssistantMessage.parts
+                          .filter(p => p.type === 'text')
+                          .map(p => p.text)
+                          .join('\n');
+                        handleShare(question, textParts);
+                      }
+                    }}
                     className="p-2 rounded-full bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 active:scale-95"
                     aria-label="Share Q&A"
                   >
@@ -356,288 +336,69 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
               </Tooltip>
             </div>
 
-            {/* Sources - more subtle */}
-            {answer.sources.length > 0 && (
-              <div className="pt-6">
-                <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">
-                  Sources
-                </h3>
-                <div className="space-y-2">
-                  {answer.sources.map((source) => (
-                      <motion.div
-                        key={source.id}
-                        className="group flex items-baseline gap-2 text-sm py-1 cursor-pointer"
-                        whileHover={{ x: 4 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <span className="text-muted-foreground transition-transform duration-200 group-hover:translate-x-1">•</span>
-                        <span className="text-foreground/80 group-hover:text-foreground underline-offset-4 group-hover:underline transition-colors">
-                          {source.title}
-                        </span>
-                        {(source.pageNumber || source.timestamp) && (
-                          <span className="text-xs text-muted-foreground">
-                            {source.pageNumber && `p. ${source.pageNumber}`}
-                            {source.timestamp && source.timestamp}
-                          </span>
-                        )}
-                      </motion.div>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {/* Related questions - expandable */}
-            {answer.relatedQuestions && answer.relatedQuestions.length > 0 && (
-              <div className="pt-6">
-                <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">
-                  Related Questions
-                </h3>
-                <div className="divide-y divide-border/40">
-                  {answer.relatedQuestions.map((relatedQ, index) => {
+
+            {/* Show follow-up conversations (skip the initial Q&A) */}
+            {messages.length > 2 && (
+              <div className="space-y-8">
+                {/* Start from index 2 to skip the initial Q&A pair */}
+                {messages.slice(2).filter((_, idx) => idx % 2 === 0).map((userMessage, idx) => {
+                  const assistantMessage = messages[messages.indexOf(userMessage) + 1];
+                  
+                  if (userMessage.role === 'user' && assistantMessage?.role === 'assistant') {
                     return (
-                      <div 
-                        key={relatedQ.id}
-                        className="animate-in fade-in-0 slide-in-from-right-2"
-                        style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'both' }}
-                      >
-                        <button
-                          onClick={() => {
-                            // Add to conversation history without filling the input
-                            const newConversation = {
-                              question: relatedQ.text,
-                              answer: null,
-                              isLoading: true
-                            };
-                            setConversationHistory(prev => [...prev, newConversation]);
-                            
-                            // Scroll to bottom after adding new question
-                            setTimeout(() => {
-                              if (mainRef.current) {
-                                mainRef.current.scrollTo({
-                                  top: mainRef.current.scrollHeight,
-                                  behavior: 'smooth'
-                                });
-                              }
-                            }, 100);
-                            
-                            // Simulate getting answer for this question
-                            const answerTimer = setTimeout(() => {
-                              const mockAnswer = mockAnswers[relatedQ.slug];
-                              setConversationHistory(prev => 
-                                prev.map((item, idx) => 
-                                  idx === prev.length - 1 
-                                    ? { ...item, answer: mockAnswer, isLoading: false }
-                                    : item
-                                )
+                      <div key={userMessage.id} className="mt-10 pt-10 border-t">
+                        <h2 className="text-2xl font-semibold mb-6">
+                          {userMessage.parts.find(p => p.type === 'text')?.text}
+                        </h2>
+                        <div className="text-lg leading-[1.7] text-foreground/90">
+                          {assistantMessage.parts.map((part, partIdx) => {
+                            if (part.type === 'text') {
+                              return (
+                                <div
+                                  key={partIdx}
+                                  dangerouslySetInnerHTML={{
+                                    __html: part.text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
+                                  }}
+                                />
                               );
-                            }, 1500);
-
-                            // 3-second timeout handler
-                            const timeoutTimer = setTimeout(() => {
-                              setConversationHistory(prev => {
-                                const last = prev[prev.length - 1];
-                                if (last && last.isLoading) {
-                                  return prev.map((item, idx) => 
-                                    idx === prev.length - 1 
-                                      ? { 
-                                          ...item, 
-                                          answer: {
-                                            id: 'timeout',
-                                            questionId: 'timeout',
-                                            content: "I'm having trouble getting that information right now. Please try again or contact TSA directly at (555) 123-4567.",
-                                            sources: [],
-                                            relatedQuestions: [],
-                                            updatedAt: new Date()
-                                          },
-                                          isLoading: false 
-                                        }
-                                      : item
-                                  );
-                                }
-                                return prev;
-                              });
-                            }, 3000);
-                          }}
-                          className="group flex items-center gap-3 w-full text-left py-3 px-3 -mx-3 rounded-lg hover:bg-muted/50 transition-colors duration-200"
-                        >
-                          <span className="text-sm text-foreground">
-                            {relatedQ.text}
-                          </span>
-                          <ArrowRightIcon 
-                            className="h-4 w-4 text-muted-foreground group-hover:text-foreground ml-auto transition-all duration-200 group-hover:translate-x-1" 
-                          />
-                        </button>
+                            }
+                            return null;
+                          })}
+                          {/* Show streaming cursor if this is the last message and still streaming */}
+                          {idx === Math.floor((messages.length - 3) / 2) && status === 'streaming' && (
+                            <span className="inline-block w-1 h-5 bg-foreground/50 animate-pulse ml-1" />
+                          )}
+                        </div>
                       </div>
                     );
-                  })}
-                </div>
+                  }
+                  return null;
+                })}
               </div>
             )}
-
-            {/* Conversation History */}
-            {conversationHistory.map((item, idx) => (
-              <motion.div 
-                key={idx} 
-                className="mt-10 pt-10 border-t" 
-                data-conversation-item
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-              >
-                <h2 className="text-3xl sm:text-4xl font-semibold mb-8">{item.question}</h2>
-                {item.isLoading ? (
-                  <TypingIndicator />
-                ) : item.answer ? (
-                  <div className="space-y-8">
-                    <div className="text-xl leading-[1.7] text-foreground">
-                      <div 
-                        dangerouslySetInnerHTML={{ 
-                          __html: item.answer.content.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>') 
-                        }} 
-                      />
-                    </div>
-
-                    {/* Copy button for conversation answers */}
-                    <div className="flex items-center gap-2 pt-4">
-                      <button
-                        onClick={() => handleCopy(item.answer!.content, `conv-${idx}`)}
-                        className={cn(
-                          "p-2 rounded-full transition-all duration-200 active:scale-95",
-                          copiedIds.has(`conv-${idx}`)
-                            ? "bg-green-500/10 text-green-600"
-                            : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                        )}
-                        aria-label="Copy answer"
-                      >
-                        {copiedIds.has(`conv-${idx}`) ? (
-                          <CheckIcon className="h-4 w-4" />
-                        ) : (
-                          <CopyIcon className="h-4 w-4" />
-                        )}
-                      </button>
-                      <button
-                        onClick={() => handleShare(item.question, item.answer!)}
-                        className="p-2 rounded-full bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 active:scale-95"
-                        aria-label="Share Q&A"
-                      >
-                        <ShareIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                    
-                    {/* Sources for this answer */}
-                    {item.answer.sources && item.answer.sources.length > 0 && (
-                      <div className="pt-6">
-                        <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">
-                          Sources
-                        </h3>
-                        <div className="space-y-2">
-                          {item.answer.sources.map((source) => (
-                            <motion.div
-                              key={source.id}
-                              className="group flex items-baseline gap-2 text-sm py-1 cursor-pointer"
-                              whileHover={{ x: 4 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <span className="text-muted-foreground transition-transform duration-200 group-hover:translate-x-1">•</span>
-                              <span className="text-foreground/80 group-hover:text-foreground underline-offset-4 group-hover:underline transition-colors">
-                                {source.title}
-                              </span>
-                              {(source.pageNumber || source.timestamp) && (
-                                <span className="text-xs text-muted-foreground">
-                                  {source.pageNumber ? `p. ${source.pageNumber}` : source.timestamp}
-                                </span>
-                              )}
-                            </motion.div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Related questions for this answer */}
-                    {item.answer.relatedQuestions && item.answer.relatedQuestions.length > 0 && (
-                      <div className="pt-6">
-                        <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">
-                          Related Questions
-                        </h3>
-                        <div className="divide-y divide-border/40">
-                          {item.answer.relatedQuestions.map((relatedQ, index) => (
-                            <div 
-                              key={relatedQ.id}
-                              className="animate-in fade-in-0 slide-in-from-right-2"
-                              style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'both' }}
-                            >
-                              <button
-                                onClick={() => {
-                                  // Don't fill the input, just add to conversation
-                                  const newConversation = {
-                                    question: relatedQ.text,
-                                    answer: null,
-                                    isLoading: true
-                                  };
-                                  setConversationHistory(prev => [...prev, newConversation]);
-                                  
-                                  // Scroll to show the full question below the header
-                                  setTimeout(() => {
-                                    if (mainRef.current) {
-                                      mainRef.current.scrollTo({
-                                        top: mainRef.current.scrollHeight,
-                                        behavior: 'smooth'
-                                      });
-                                    }
-                                  }, 100); // Small delay to ensure DOM update
-                                  
-                                  // Load the answer after delay
-                                  setTimeout(() => {
-                                    const mockAnswer = mockAnswers[relatedQ.slug];
-                                    setConversationHistory(prev => 
-                                      prev.map((item, idx) => 
-                                        idx === prev.length - 1 
-                                          ? { ...item, answer: mockAnswer, isLoading: false }
-                                          : item
-                                      )
-                                    );
-                                  }, 1500);
-                                }}
-                                className="group flex items-center gap-3 w-full text-left py-3 px-3 -mx-3 rounded-lg hover:bg-muted/50 transition-colors duration-200"
-                              >
-                                <span className="text-sm text-foreground">
-                                  {relatedQ.text}
-                                </span>
-                                <ArrowRightIcon 
-                                  className="h-4 w-4 text-muted-foreground group-hover:text-foreground ml-auto transition-all duration-200 group-hover:translate-x-1" 
-                                />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">No answer found.</p>
-                )}
-              </motion.div>
-            ))}
+            
 
             {/* Follow-up section */}
             <div className="pt-10 mt-8 border-t follow-up-section">
               <SearchBox 
                 placeholder="Ask a follow-up question" 
                 showAvatar={true}
+                showAudienceToggle={false}
                 className="max-w-2xl"
                 showHelperText={false}
                 size="default"
-                value={followUpInput}
-                onValueChange={setFollowUpInput}
-                onSubmit={(question) => {
-                  if (question.trim()) {
-                    const newConversation = {
-                      question: question,
-                      answer: null,
-                      isLoading: true
-                    };
-                    setConversationHistory(prev => [...prev, newConversation]);
-                    setFollowUpInput("");
+                onSubmit={(followUpQuestion) => {
+                  if (followUpQuestion.trim()) {
+                    sendMessage({
+                      role: 'user',
+                      parts: [
+                        {
+                          type: 'text',
+                          text: followUpQuestion,
+                        }
+                      ],
+                    });
                     
                     // Scroll to bottom after adding new question
                     setTimeout(() => {
@@ -648,78 +409,12 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                         });
                       }
                     }, 100);
-                    
-                    // Get answer from API
-                    const fetchFollowUpAnswer = async () => {
-                      try {
-                        const response = await fetch('/api/q', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                          },
-                          body: JSON.stringify({ 
-                            question: question,
-                            audience 
-                          })
-                        });
-                        
-                        if (!response.ok) {
-                          throw new Error(`API error: ${response.status}`);
-                        }
-                        
-                        const data = await response.json();
-                        setConversationHistory(prev => 
-                          prev.map((item, idx) => 
-                            idx === prev.length - 1 
-                              ? { ...item, answer: data as Answer, isLoading: false }
-                              : item
-                          )
-                        );
-                      } catch (error) {
-                        console.error('Error fetching follow-up answer:', error);
-                        setConversationHistory(prev => 
-                          prev.map((item, idx) => 
-                            idx === prev.length - 1 
-                              ? { ...item, answer: null, isLoading: false }
-                              : item
-                          )
-                        );
-                      }
-                    };
-                    
-                    fetchFollowUpAnswer();
-
-                    // 3-second timeout handler
-                    const timeoutTimer = setTimeout(() => {
-                      setConversationHistory(prev => {
-                        const last = prev[prev.length - 1];
-                        if (last && last.isLoading) {
-                          return prev.map((item, idx) => 
-                            idx === prev.length - 1 
-                              ? { 
-                                  ...item, 
-                                  answer: {
-                                    id: 'timeout',
-                                    questionId: 'timeout',
-                                    content: "I'm having trouble getting that information right now. Please try again or contact TSA directly at (555) 123-4567.",
-                                    sources: [],
-                                    relatedQuestions: [],
-                                    updatedAt: new Date()
-                                  },
-                                  isLoading: false 
-                                }
-                              : item
-                          );
-                        }
-                        return prev;
-                      });
-                    }, 3000);
                   }
                 }}
               />
             </div>
           </motion.div>
-        ) : (
+        ) : error ? (
           <motion.div
             key="error"
             initial={{ opacity: 0, y: 10 }}
@@ -728,10 +423,10 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
             className="rounded-lg bg-destructive/10 p-6 text-center"
           >
             <p className="text-sm text-destructive">
-              Sorry, I couldn't find an answer to your question. Please try rephrasing or contact TSA directly.
+              Sorry, something went wrong. Please try again.
             </p>
           </motion.div>
-        )}
+        ) : null}
         </AnimatePresence>
         </div>
       </main>

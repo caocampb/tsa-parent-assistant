@@ -31,6 +31,14 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!
 });
 
+/**
+ * Convert array to PostgreSQL array literal format
+ * This prevents Supabase from stringifying the embedding
+ */
+function formatPgVector(embedding: number[]): string {
+  return `[${embedding.join(',')}]`;
+}
+
 async function insertQAPairs() {
   console.log(`Inserting ${qaPairs.qa_pairs.length} Q&A pairs...`);
   
@@ -51,7 +59,7 @@ async function insertQAPairs() {
           answer: pair.answer,
           category: pair.category,
           audience: pair.audience,
-          embedding: embedding.data[0].embedding
+          embedding: formatPgVector(embedding.data[0].embedding) as any
         });
       
       if (error) {

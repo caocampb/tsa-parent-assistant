@@ -1,0 +1,19 @@
+TEST PARENT DOCUMENT - DASH SYSTEM GUIDE
+
+What is the Dash system?
+The Dash system is our online parent portal where you can monitor your child's daily progress. It shows completed lessons, time spent on each subject, and areas where your child might need extra support.
+
+How do I access Dash?
+Visit dash.tsa-academy.com and log in with the credentials provided during enrollment. If you've forgotten your password, use the "Reset Password" link.
+
+What information is available in Dash?
+- Daily progress reports
+- Subject-by-subject breakdown
+- Screen recordings of work sessions
+- Achievement milestones
+- Attendance records
+
+When is Dash updated?
+The system updates in real-time as your child completes work throughout the day. You can check progress anytime.
+
+This is a test document to verify the upload system is working correctly.

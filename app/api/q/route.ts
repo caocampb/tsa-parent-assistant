@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { openai } from '@ai-sdk/openai';
-import { streamText, generateText } from 'ai';
+import { streamText } from 'ai';
 import OpenAI from 'openai';
 import { supabase } from '@/lib/supabase';
 import { getSystemPrompt, getQAPrompt } from '@/lib/prompts';
@@ -35,7 +35,11 @@ function generateQueryVariations(question: string): string[] {
     'payment': ['tuition', 'fee', 'payment'],
     'amount': ['cost', 'fee', 'price', 'amount'],
     'phone number': ['phone', 'contact', 'call'],
-    'number': ['phone', 'contact']
+    'number': ['phone', 'contact'],
+    // Critical terms for TSA
+    'dash': ['Dash system', 'Dash', 'dashboard', 'parent portal'],
+    'map': ['MAP test', 'MAP testing', 'MAP assessment'],
+    'homework': ['assignments', 'home work', 'hw']
   };
   
   // Generate variations with synonyms
@@ -142,7 +146,36 @@ function calculateKeywordOverlap(question: string, content: string): number {
 }
 
 export async function POST(request: NextRequest) {
-  const { question: rawQuestion, audience: providedAudience } = await request.json();
+  const body = await request.json();
+  
+  // Handle AI SDK format (messages array) or direct question
+  let rawQuestion: string;
+  let providedAudience: string;
+  
+  if (body.messages && Array.isArray(body.messages)) {
+    // AI SDK v5 format - get the last user message
+    const lastUserMessage = body.messages.filter((m: any) => m.role === 'user').pop();
+    // Extract text from parts array (AI SDK v5 format)
+    if (lastUserMessage?.parts) {
+      const textPart = lastUserMessage.parts.find((p: any) => p.type === 'text');
+      rawQuestion = textPart?.text || '';
+    } else {
+      // Fallback to content for older format
+      rawQuestion = lastUserMessage?.content || '';
+    }
+    providedAudience = body.audience || 'parent';
+  } else {
+    // Direct format
+    rawQuestion = body.question || '';
+    providedAudience = body.audience || 'parent';
+  }
+  
+  if (!rawQuestion) {
+    return NextResponse.json(
+      { error: 'Question is required' },
+      { status: 400 }
+    );
+  }
   
   // Sanitize input for consistent embeddings
   const question = rawQuestion
@@ -150,11 +183,10 @@ export async function POST(request: NextRequest) {
     .replace(/\s+/g, ' ')            // Normalize multiple spaces
     .replace(/[?!.]+$/, '?');        // Normalize ending punctuation
   
-  // Check if client wants streaming (default to JSON for compatibility)
-  const acceptsStream = request.headers.get('accept')?.includes('text/event-stream');
+  // Always stream responses
   
   // 1. Use provided audience (default to 'parent' if not provided)
-  const audience = providedAudience || 'parent';
+  const audience = (providedAudience === 'coach' ? 'coach' : 'parent') as 'parent' | 'coach';
 
   // 2. Add audience context to the question for better embedding
   const contextualQuestion = audience === 'coach'
@@ -217,44 +249,27 @@ export async function POST(request: NextRequest) {
   if (bestQAMatch && bestQAMatch.similarity >= 0.75) {
     const qaAnswer = bestQAMatch.answer;
     
-    if (acceptsStream) {
-      // Stream the Q&A answer with minimal reasoning for fast response
-      const result = await streamText({
-        model: openai('gpt-5-mini'),
-        messages: [
-          {
-            role: 'system',
-            content: getQAPrompt()
-          },
-          {
-            role: 'user',
-            content: qaAnswer
-          }
-        ],
-        providerOptions: {
-          openai: {
-            reasoning_effort: 'minimal',
-            textVerbosity: 'low'
-          }
+    // Always stream the Q&A answer with minimal reasoning for fast response
+    const result = await streamText({
+      model: openai('gpt-5-mini'),
+      messages: [
+        {
+          role: 'system',
+          content: getQAPrompt()
+        },
+        {
+          role: 'user',
+          content: qaAnswer
         }
-      });
-      return (result as any).toUIMessageStreamResponse();
-    } else {
-      // Return Q&A answer as JSON
-      return NextResponse.json({
-        id: `q_${Date.now()}`,
-        question: question,
-        answer: qaAnswer,
-        sources: [{
-          type: 'qa_pair',
-          question: bestQAMatch.question,
-          category: bestQAMatch.category,
-          similarity: bestQAMatch.similarity
-        }],
-        confidence: bestQAMatch.similarity,
-        created_at: new Date().toISOString()
-      });
-    }
+      ],
+      providerOptions: {
+        openai: {
+          reasoning_effort: 'minimal',
+          textVerbosity: 'low'
+        }
+      }
+    });
+    return (result as any).toUIMessageStreamResponse();
   }
   
   // 5. Fall back to RAG: Use hybrid search for better accuracy
@@ -407,74 +422,50 @@ export async function POST(request: NextRequest) {
         firstChunk: chunks[0].content.substring(0, 200) + '...'
       });
     }
-    return NextResponse.json({
-      answer: getFallbackMessage(question, audience),
-      sources: [],
-      confidence: 0
-    });
-  }
-  
-  // 7. Generate answer from document chunks (RAG fallback)
-  if (acceptsStream) {
-    // Streaming response for UI
+    // Stream the fallback message
     const result = await streamText({
       model: openai('gpt-5-mini'),
       messages: [
         {
           role: 'system',
-          content: getSystemPrompt(audience)
+          content: 'You are a helpful assistant. Provide the following message exactly as written.'
         },
         {
           role: 'user',
-          content: `Context:\n${chunks.map(c => c.content).join('\n\n')}\n\nQuestion: ${question}`
+          content: getFallbackMessage(question, audience)
         }
       ],
       providerOptions: {
         openai: {
-          reasoning_effort: 'low',
+          reasoning_effort: 'minimal',
           textVerbosity: 'low'
         }
       }
     });
-    
-    // Use toUIMessageStreamResponse from the prototype
     return (result as any).toUIMessageStreamResponse();
-  } else {
-    // JSON response for testing
-    const { text } = await generateText({
-      model: openai('gpt-5-mini'),
-      messages: [
-        {
-          role: 'system',
-          content: getSystemPrompt(audience)
-        },
-        {
-          role: 'user',
-          content: `Context:\n${chunks.map(c => c.content).join('\n\n')}\n\nQuestion: ${question}`
-        }
-      ],
-      providerOptions: {
-        openai: {
-          reasoning_effort: 'low',
-          textVerbosity: 'low'
-        }
-      }
-    });
-    
-    // Return JSON response matching the expected format
-    return NextResponse.json({
-      id: `q_${Date.now()}`,
-      question: question,
-      answer: text,
-      sources: chunks.map(chunk => ({
-        chunk_id: chunk.chunk_id,
-        document_id: chunk.document_id,
-        content: chunk.content,
-        similarity: chunk.similarity,
-        page_number: chunk.page_number
-      })),
-      confidence: chunks[0]?.similarity || 0,
-      created_at: new Date().toISOString()
-    });
   }
+  
+  // 7. Generate answer from document chunks (RAG fallback) - Always stream
+  const result = await streamText({
+    model: openai('gpt-5-mini'),
+    messages: [
+      {
+        role: 'system',
+        content: getSystemPrompt(audience)
+      },
+      {
+        role: 'user',
+        content: `Context:\n${chunks.map(c => c.content).join('\n\n')}\n\nQuestion: ${question}`
+      }
+    ],
+    providerOptions: {
+      openai: {
+        reasoning_effort: 'low',
+        textVerbosity: 'low'
+      }
+    }
+  });
+  
+  // Use toUIMessageStreamResponse from the prototype
+  return (result as any).toUIMessageStreamResponse();
 }

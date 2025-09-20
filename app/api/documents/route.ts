@@ -11,6 +11,11 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || ''
 });
 
+// Format embeddings for PostgreSQL vector type
+function formatPgVector(embedding: number[]): string {
+  return `[${embedding.join(',')}]`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Check if OpenAI API key is configured
@@ -44,6 +49,7 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const audience = (formData.get('audience') as string) || 'parent'; // Default to parent
     
     if (!file) {
       return NextResponse.json(
@@ -75,24 +81,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Map audience to correct table
+    const tableMap = {
+      parent: 'documents_parent',
+      coach: 'documents_coach',
+      shared: 'documents_shared'
+    };
+    const documentsTable = tableMap[audience as keyof typeof tableMap] || 'documents_parent';
+    const chunksTable = `document_chunks_${audience}`;
+    
     // Check for duplicate upload using idempotency key
     const { data: existing } = await supabase
-      .from('documents')
-      .select(`
-        *,
-        document_chunks(count)
-      `)
+      .from(documentsTable)
+      .select('*')
       .eq('idempotency_key', idempotencyKey)
       .single();
 
     if (existing) {
+      // Get chunk count separately
+      const { count: chunkCount } = await supabase
+        .from(chunksTable)
+        .select('*', { count: 'exact', head: true })
+        .eq('document_id', existing.id);
+      
       // Return existing document (idempotent)
-      const chunkCount = existing.document_chunks?.[0]?.count || 0;
       return NextResponse.json({
         id: existing.id,
         filename: existing.filename,
         doc_type: existing.doc_type,
-        chunk_count: chunkCount,
+        chunk_count: chunkCount || 0,
         uploaded_at: existing.uploaded_at
       }, { status: 200 });
     }
@@ -102,7 +119,7 @@ export async function POST(request: NextRequest) {
 
     // Store the document
     const { data: document, error: dbError } = await supabase
-      .from('documents')
+      .from(documentsTable)
       .insert({
         filename: file.name,
         doc_type: docType,
@@ -112,11 +129,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (dbError) {
+      console.error('Document save error:', dbError);
       return NextResponse.json(
         { 
           error: {
             type: 'database_error',
-            message: 'Failed to save document',
+            message: 'Failed to save document: ' + dbError.message,
             code: 'database_error'
           }
         },
@@ -125,7 +143,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Process file content
-    const chunks = await processFile(file, document.id);
+    const chunks = await processFile(file, document.id, audience);
     
     // Return resource with actual chunk count and embedding status
     return NextResponse.json({
@@ -155,12 +173,26 @@ export async function POST(request: NextRequest) {
 
 // GET /api/documents - List all documents
 export async function GET() {
-  const { data, error } = await supabase
-    .from('documents')
-    .select('*')
-    .order('uploaded_at', { ascending: false });
+  // Fetch from all three tables
+  const [parentDocs, coachDocs, sharedDocs] = await Promise.all([
+    supabase.from('documents_parent').select('*').order('uploaded_at', { ascending: false }),
+    supabase.from('documents_coach').select('*').order('uploaded_at', { ascending: false }),
+    supabase.from('documents_shared').select('*').order('uploaded_at', { ascending: false })
+  ]);
+  
+  // Combine results with audience tags
+  const allDocs = [
+    ...(parentDocs.data || []).map(doc => ({ ...doc, audience: 'parent' })),
+    ...(coachDocs.data || []).map(doc => ({ ...doc, audience: 'coach' })),
+    ...(sharedDocs.data || []).map(doc => ({ ...doc, audience: 'shared' }))
+  ];
+  
+  // Sort by upload date
+  const sortedDocs = allDocs.sort((a, b) => 
+    new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+  );
 
-  if (error) {
+  if (parentDocs.error || coachDocs.error || sharedDocs.error) {
     return NextResponse.json(
       { 
         error: {
@@ -173,11 +205,104 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json(sortedDocs);
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const documentId = searchParams.get('id');
+    const audience = searchParams.get('audience');
+    
+    if (!documentId || !audience) {
+      return NextResponse.json(
+        { 
+          error: {
+            type: 'invalid_request',
+            message: 'Document ID and audience are required',
+            code: 'missing_parameters'
+          }
+        },
+        { status: 400 }
+      );
+    }
+    
+    // Map audience to correct table
+    const tableMap = {
+      parent: 'documents_parent',
+      coach: 'documents_coach',
+      shared: 'documents_shared'
+    };
+    const documentsTable = tableMap[audience as keyof typeof tableMap];
+    const chunksTable = `document_chunks_${audience}`;
+    
+    if (!documentsTable) {
+      return NextResponse.json(
+        { 
+          error: {
+            type: 'invalid_request',
+            message: 'Invalid audience',
+            code: 'invalid_audience'
+          }
+        },
+        { status: 400 }
+      );
+    }
+    
+    // Delete chunks first (due to foreign key constraint)
+    const { error: chunksError } = await supabase
+      .from(chunksTable)
+      .delete()
+      .eq('document_id', documentId);
+    
+    if (chunksError) {
+      console.error('Error deleting chunks:', chunksError);
+    }
+    
+    // Delete the document
+    const { data, error } = await supabase
+      .from(documentsTable)
+      .delete()
+      .eq('id', documentId)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Document delete error:', error);
+      return NextResponse.json(
+        { 
+          error: {
+            type: 'database_error',
+            message: 'Failed to delete document',
+            code: 'database_error'
+          }
+        },
+        { status: 500 }
+      );
+    }
+    
+    return NextResponse.json({
+      success: true,
+      deleted: data
+    });
+    
+  } catch (error: any) {
+    console.error('Delete error:', error);
+    return NextResponse.json(
+      { 
+        error: {
+          type: 'server_error',
+          message: error.message || 'Internal server error',
+          code: 'internal_error'
+        }
+      },
+      { status: 500 }
+    );
+  }
 }
 
 // Process file and create chunks
-async function processFile(file: File, documentId: string): Promise<any[]> {
+async function processFile(file: File, documentId: string, audience: string = 'parent'): Promise<any[]> {
   const fileType = file.name.split('.').pop()?.toLowerCase();
   let content = '';
   let pageNumber: number | null = null;
@@ -280,7 +405,7 @@ async function processFile(file: File, documentId: string): Promise<any[]> {
                 content: chunk.content,
                 page_number: null,
                 audio_timestamp: chunk.timestamp,
-                embedding: embeddingResponse.data[0].embedding
+                embedding: formatPgVector(embeddingResponse.data[0].embedding) as any
               });
             } catch (error: any) {
               console.error(`Error generating embedding for audio chunk ${i}:`, error);
@@ -290,7 +415,7 @@ async function processFile(file: File, documentId: string): Promise<any[]> {
           
           if (chunkRecords.length > 0) {
             const { error } = await supabase
-              .from('document_chunks')
+              .from(`document_chunks_${audience}`)
               .insert(chunkRecords);
               
             if (error) {
@@ -358,7 +483,7 @@ async function processFile(file: File, documentId: string): Promise<any[]> {
         content: chunk,
         page_number: pageNumber,
         audio_timestamp: audioTimestamp,
-        embedding: embeddingResponse.data[0].embedding
+        embedding: formatPgVector(embeddingResponse.data[0].embedding) as any
       });
     } catch (error: any) {
       console.error(`Error generating embedding for chunk ${i}:`, error);
@@ -367,9 +492,9 @@ async function processFile(file: File, documentId: string): Promise<any[]> {
   }
 
   if (chunkRecords.length > 0) {
-    const { error } = await supabase
-      .from('document_chunks')
-      .insert(chunkRecords);
+      const { error } = await supabase
+        .from(`document_chunks_${audience}`)
+        .insert(chunkRecords);
 
     if (error) {
       console.error('Error storing chunks:', error);

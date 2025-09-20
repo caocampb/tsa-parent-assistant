@@ -13,6 +13,7 @@ interface Document {
   type: "pdf" | "docx" | "audio";
   size: number;
   uploadedAt: Date;
+  audience?: 'parent' | 'coach' | 'shared';
 }
 
 interface DocumentTableProps {
@@ -187,6 +188,17 @@ export function DocumentTable({ documents, onDelete, isFiltered }: DocumentTable
                       {new Date().getTime() - doc.uploadedAt.getTime() < 24 * 60 * 60 * 1000 && (
                         <span className="px-1.5 py-0.5 text-[10px] font-medium bg-green-100 text-green-700 rounded">
                           NEW
+                        </span>
+                      )}
+                      {/* Audience badge */}
+                      {doc.audience && (
+                        <span className={cn(
+                          "px-1.5 py-0.5 text-[10px] font-medium rounded",
+                          doc.audience === 'parent' && "bg-blue-100 text-blue-700",
+                          doc.audience === 'coach' && "bg-green-100 text-green-700",
+                          doc.audience === 'shared' && "bg-purple-100 text-purple-700"
+                        )}>
+                          {doc.audience === 'parent' ? 'PARENT' : doc.audience === 'coach' ? 'COACH' : 'SHARED'}
                         </span>
                       )}
                       {/* Warning for large files */}

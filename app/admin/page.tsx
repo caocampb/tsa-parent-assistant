@@ -15,6 +15,7 @@ interface Document {
   type: "pdf" | "docx" | "audio";
   size: number;
   uploadedAt: Date;
+  audience?: 'parent' | 'coach' | 'shared';
 }
 
 export default function AdminPage() {
@@ -27,36 +28,30 @@ export default function AdminPage() {
   const [sortBy, setSortBy] = useState<"name" | "date" | "size">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [recentlyDeleted, setRecentlyDeleted] = useState<Document | null>(null);
+  const [selectedAudience, setSelectedAudience] = useState<'parent' | 'coach' | 'shared'>('parent');
 
-  // Simulate loading documents
+  // Load documents from API
   useEffect(() => {
     if (isAuthenticated) {
-      setTimeout(() => {
-        setDocuments([
-          {
-            id: "1",
-            name: "Parent_Handbook_2024.pdf",
-            type: "pdf",
-            size: 2456789,
-            uploadedAt: new Date("2024-01-15T10:30:00"),
-          },
-          {
-            id: "2",
-            name: "Registration_Guide.pdf",
-            type: "pdf",
-            size: 1234567,
-            uploadedAt: new Date("2024-01-10T14:20:00"),
-          },
-          {
-            id: "3",
-            name: "Coach_Introduction.mp3",
-            type: "audio",
-            size: 5678901,
-            uploadedAt: new Date("2024-01-05T09:15:00"),
-          },
-        ]);
-        setIsLoading(false);
-      }, 1000); // Simulate API delay
+      fetch('/api/documents')
+        .then(res => res.json())
+        .then(data => {
+          setDocuments(data.map((doc: any) => ({
+            id: doc.id,
+            name: doc.filename,
+            type: doc.filename.endsWith('.pdf') ? 'pdf' : 
+                  doc.filename.endsWith('.docx') || doc.filename.endsWith('.doc') ? 'docx' : 
+                  'audio',
+            size: 0, // Size not stored in DB currently
+            uploadedAt: new Date(doc.uploaded_at),
+            audience: doc.audience
+          })));
+          setIsLoading(false);
+        })
+        .catch(err => {
+          console.error('Failed to load documents:', err);
+          setIsLoading(false);
+        });
     }
   }, [isAuthenticated]);
 
@@ -85,32 +80,56 @@ export default function AdminPage() {
     }
   };
 
-  const handleUpload = (files: File[]) => {
-    // In production, this would upload to server
+  const handleUpload = async (files: File[]) => {
+    // Upload to server with audience
     const updatedDocs = [...documents];
     const replacedFiles: string[] = [];
     
-    files.forEach((file) => {
-      const existingIndex = updatedDocs.findIndex(doc => doc.name === file.name);
-      const newDoc: Document = {
-        id: existingIndex >= 0 ? updatedDocs[existingIndex].id : Date.now().toString() + Math.random(),
-        name: file.name,
-        type: file.name.endsWith(".pdf") ? "pdf" : 
-              file.name.endsWith(".docx") || file.name.endsWith(".doc") ? "docx" : 
-              "audio",
-        size: file.size,
-        uploadedAt: new Date(),
-      };
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('audience', selectedAudience);
       
-      if (existingIndex >= 0) {
-        // Replace existing file
-        updatedDocs[existingIndex] = newDoc;
-        replacedFiles.push(file.name);
-      } else {
-        // Add new file
-        updatedDocs.unshift(newDoc);
+      try {
+        const response = await fetch('/api/documents', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Idempotency-Key': `${selectedAudience}-${file.name}-${file.size}-${file.lastModified}`
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          const existingIndex = updatedDocs.findIndex(doc => doc.name === file.name && doc.audience === selectedAudience);
+          const newDoc: Document = {
+            id: result.id,
+            name: file.name,
+            type: file.name.endsWith(".pdf") ? "pdf" : 
+                  file.name.endsWith(".docx") || file.name.endsWith(".doc") ? "docx" : 
+                  "audio",
+            size: file.size,
+            uploadedAt: new Date(),
+            audience: selectedAudience
+          };
+          
+          if (existingIndex >= 0) {
+            // Replace existing file
+            updatedDocs[existingIndex] = newDoc;
+            replacedFiles.push(file.name);
+          } else {
+            // Add new file
+            updatedDocs.unshift(newDoc);
+          }
+        } else {
+          toast.error(`Failed to upload ${file.name}: ${result.error?.message || 'Unknown error'}`);
+        }
+      } catch (error) {
+        toast.error(`Failed to upload ${file.name}`);
+        console.error('Upload error:', error);
       }
-    });
+    }
 
     setDocuments(updatedDocs);
     
@@ -127,19 +146,31 @@ export default function AdminPage() {
     });
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const docToDelete = documents.find(doc => doc.id === id);
-    if (docToDelete) {
-      setDocuments(documents.filter(doc => doc.id !== id));
-      setRecentlyDeleted(docToDelete);
+    if (!docToDelete) return;
+    
+    // Optimistically remove from UI
+    setDocuments(documents.filter(doc => doc.id !== id));
+    
+    try {
+      const response = await fetch(`/api/documents?id=${id}&audience=${docToDelete.audience}`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete');
+      }
       
       toast.success(
         <div className="flex items-center justify-between gap-4">
           <span>Document deleted</span>
           <button
-            onClick={() => {
+            onClick={async () => {
+              // Re-upload the document to restore it
+              const formData = new FormData();
+              // Note: We can't restore the actual file content, just the record
               setDocuments(prev => [...prev, docToDelete]);
-              setRecentlyDeleted(null);
               toast.dismiss();
             }}
             className="text-sm font-medium text-primary hover:underline"
@@ -152,9 +183,11 @@ export default function AdminPage() {
           duration: 5000,
         }
       );
-      
-      // Clear recently deleted after 5 seconds
-      setTimeout(() => setRecentlyDeleted(null), 5000);
+    } catch (error) {
+      // Restore on error
+      setDocuments(prev => [...prev, docToDelete]);
+      toast.error('Failed to delete document');
+      console.error('Delete error:', error);
     }
   };
 
@@ -334,6 +367,44 @@ export default function AdminPage() {
           {/* Upload Zone */}
           <div className="space-y-4">
             <h2 className="text-lg font-medium mb-6">Upload</h2>
+            
+            {/* Audience Selector */}
+            <div className="flex gap-2 p-1 bg-muted rounded-lg">
+              <button
+                onClick={() => setSelectedAudience('parent')}
+                className={cn(
+                  "flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                  selectedAudience === 'parent' 
+                    ? "bg-background text-primary shadow-sm" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Parent
+              </button>
+              <button
+                onClick={() => setSelectedAudience('coach')}
+                className={cn(
+                  "flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                  selectedAudience === 'coach' 
+                    ? "bg-background text-primary shadow-sm" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Coach
+              </button>
+              <button
+                onClick={() => setSelectedAudience('shared')}
+                className={cn(
+                  "flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                  selectedAudience === 'shared' 
+                    ? "bg-background text-primary shadow-sm" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Shared
+              </button>
+            </div>
+            
             <UploadZone onUpload={handleUpload} />
           </div>
         </div>

@@ -245,3 +245,6 @@ GRANT EXECUTE ON FUNCTION search_qa_pairs TO anon, authenticated;
 
 
 
+
+
+

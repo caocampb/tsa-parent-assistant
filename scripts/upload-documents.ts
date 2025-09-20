@@ -16,6 +16,14 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!
 });
 
+/**
+ * Convert array to PostgreSQL array literal format
+ * This prevents Supabase from stringifying the embedding
+ */
+function formatPgVector(embedding: number[]): string {
+  return `[${embedding.join(',')}]`;
+}
+
 // Configuration
 const CHUNK_SIZE = 250; // tokens
 const CHUNK_OVERLAP = 50; // tokens
@@ -123,7 +131,7 @@ async function uploadDocument(doc: DocumentUpload) {
           document_id: document.id,
           chunk_index: i,
           content: chunk,
-          embedding: embeddingResponse.data[0].embedding
+          embedding: formatPgVector(embeddingResponse.data[0].embedding) as any
         });
       
       if (chunkError) {
@@ -155,6 +163,7 @@ async function uploadAllDocuments() {
 
 // Run the upload
 uploadAllDocuments().catch(console.error);
+
 
 
 
