@@ -19,7 +19,7 @@ export default function AdminPage() {
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD || password === "tsa2024") {
+    if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
       sessionStorage.setItem("admin-auth", "authenticated");
       window.location.href = '/admin/documents';
     } else {

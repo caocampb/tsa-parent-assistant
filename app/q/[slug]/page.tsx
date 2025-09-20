@@ -272,7 +272,22 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
             const shouldShowSkeleton = (!firstAssistant || !hasTextContent) && 
               (status === 'submitted' || status === 'streaming' || (!hasInitialized && question));
             
-            if (shouldShowSkeleton) {
+            // Will Larson's simple error state
+            if (error) {
+              return (
+                <div className="mb-8 text-center py-12">
+                  <p className="text-lg text-muted-foreground mb-4">
+                    Something went wrong. Please try again.
+                  </p>
+                  <button 
+                    onClick={() => window.location.reload()}
+                    className="text-primary hover:underline"
+                  >
+                    Refresh page
+                  </button>
+                </div>
+              );
+            } else if (shouldShowSkeleton) {
               return (
                 <div className="mb-8">
                   <AnswerSkeleton />

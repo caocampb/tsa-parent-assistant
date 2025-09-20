@@ -65,16 +65,14 @@ export default function AdminPage() {
 
   const handleAuth = (e: FormEvent) => {
     e.preventDefault();
-    console.log("Auth attempt with password:", password);
+    // Auth attempt
     
     // In production, this would be an API call
-    if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD || password === "tsa2024") {
-      console.log("Password correct, logging in...");
+    if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
       sessionStorage.setItem("admin-auth", "authenticated");
       setIsAuthenticated(true);
       setError(false);
     } else {
-      console.log("Password incorrect");
       setError(true);
       setPassword("");
     }
