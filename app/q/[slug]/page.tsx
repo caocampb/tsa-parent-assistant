@@ -74,6 +74,23 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
     }
   }, [question, sendMessage, hasInitialized]);
 
+  // Smart auto-scroll during streaming
+  useEffect(() => {
+    if (status === 'streaming' && isAtBottom) {
+      // Only auto-scroll if user is already near bottom
+      const scrollInterval = setInterval(() => {
+        if (mainRef.current && isAtBottom) {
+          mainRef.current.scrollTo({
+            top: mainRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      }, 100);
+
+      return () => clearInterval(scrollInterval);
+    }
+  }, [status, isAtBottom]);
+
   // Handle scroll position for scroll-to-bottom button
   useEffect(() => {
     const handleScroll = () => {
@@ -391,7 +408,15 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                                 }
                               ],
                             });
-                            scrollToBottom();
+                            // Smooth scroll to show the new Q&A pair
+                            setTimeout(() => {
+                              if (mainRef.current) {
+                                mainRef.current.scrollTo({
+                                  top: mainRef.current.scrollHeight,
+                                  behavior: 'smooth'
+                                });
+                              }
+                            }, 100);
                           }}
                           className="flex items-center gap-3 w-full text-left px-4 py-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
                         >
@@ -473,7 +498,7 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                             </TooltipContent>
                           </Tooltip>
                           
-                          {mounted && navigator.share && (
+                          {mounted && typeof navigator !== 'undefined' && navigator.share && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <button
@@ -535,7 +560,15 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                                             }
                                           ],
                                         });
-                                        scrollToBottom();
+                                        // Smooth scroll to show the new Q&A pair
+                                        setTimeout(() => {
+                                          if (mainRef.current) {
+                                            mainRef.current.scrollTo({
+                                              top: mainRef.current.scrollHeight,
+                                              behavior: 'smooth'
+                                            });
+                                          }
+                                        }, 100);
                                       }}
                                       className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors group text-sm"
                                     >
