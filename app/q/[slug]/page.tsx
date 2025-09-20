@@ -146,7 +146,7 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
     const shareText = `Q: ${question}\n\nA: ${answerText}`;
 
     // Check if Web Share API is available (mobile)
-    if (navigator.share) {
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       try {
         await navigator.share({
           title: 'TSA Answer',
@@ -389,6 +389,42 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                 }
               }
               
+              // Show loading state if we're still streaming the first response and haven't received follow-ups yet
+              const isStreamingFirstResponse = status === 'streaming' && messages.filter(m => m.role === 'assistant').length === 1 && !followUpQuestions;
+              
+              if (isStreamingFirstResponse) {
+                return (
+                  <div className="mt-10">
+                    <h3 className="text-xs font-semibold text-muted-foreground tracking-wider uppercase mb-4">
+                      Related Questions
+                    </h3>
+                    <div className="space-y-3">
+                      {[0, 1, 2].map((i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-3 px-4 py-3 rounded-lg bg-muted/30"
+                        >
+                          <div className="flex items-center gap-1">
+                            <div
+                              className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-pulse"
+                              style={{ animationDelay: `${i * 200}ms` }}
+                            />
+                            <div
+                              className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-pulse"
+                              style={{ animationDelay: `${i * 200 + 200}ms` }}
+                            />
+                            <div
+                              className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-pulse"
+                              style={{ animationDelay: `${i * 200 + 400}ms` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+              
               if (followUpQuestions && followUpQuestions.length > 0) {
                 return (
                   <div className="mt-10">
@@ -499,7 +535,7 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                             </TooltipContent>
                           </Tooltip>
                           
-                          {mounted && typeof navigator !== 'undefined' && navigator.share && (
+                          {mounted && typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <button
@@ -584,6 +620,8 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                         {/* Show follow-up questions for this assistant message */}
                         {(() => {
                           let followUpQuestions: string[] | undefined;
+                          const isLastMessage = idx === Math.floor((messages.length - 3) / 2);
+                          const isCurrentlyStreaming = status === 'streaming' && isLastMessage;
                           
                           // Check this specific assistant message for follow-ups
                           if (assistantMessage && assistantMessage.parts) {
@@ -596,6 +634,40 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                                 }
                               }
                             }
+                          }
+                          
+                          // Show loading state if this is the last message and we're still streaming
+                          if (isCurrentlyStreaming && !followUpQuestions) {
+                            return (
+                              <div className="mt-6">
+                                <h3 className="text-xs font-semibold text-muted-foreground tracking-wider uppercase mb-3">
+                                  Related Questions
+                                </h3>
+                                <div className="space-y-2">
+                                  {[0, 1, 2].map((i) => (
+                                    <div
+                                      key={i}
+                                      className="flex items-center gap-3 px-3 py-2 rounded-lg bg-muted/20"
+                                    >
+                                      <div className="flex items-center gap-1">
+                                        <div
+                                          className="w-1.5 h-1.5 bg-muted-foreground/30 rounded-full animate-pulse"
+                                          style={{ animationDelay: `${i * 200}ms` }}
+                                        />
+                                        <div
+                                          className="w-1.5 h-1.5 bg-muted-foreground/30 rounded-full animate-pulse"
+                                          style={{ animationDelay: `${i * 200 + 200}ms` }}
+                                        />
+                                        <div
+                                          className="w-1.5 h-1.5 bg-muted-foreground/30 rounded-full animate-pulse"
+                                          style={{ animationDelay: `${i * 200 + 400}ms` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
                           }
                           
                           if (followUpQuestions && followUpQuestions.length > 0) {
