@@ -36,45 +36,45 @@ export interface SearchResult {
 export const popularQuestions: Question[] = [
   {
     id: "1",
-    text: "When does fall registration open?",
-    slug: "fall-registration-dates",
-    category: "registration",
+    text: "How much does TSA cost?",
+    slug: "tsa-tuition-cost",
+    category: "payment",
     popularity: 95
   },
   {
     id: "2",
-    text: "What's included in tuition fees?",
-    slug: "tuition-fees-included",
-    category: "payment",
-    popularity: 88
+    text: "What is Dash?",
+    slug: "what-is-dash",
+    category: "platform",
+    popularity: 90
   },
   {
     id: "3",
-    text: "Where can I order team uniforms?",
-    slug: "team-uniform-ordering",
-    category: "uniform",
-    popularity: 82
+    text: "When does spring registration open?",
+    slug: "spring-registration-dates",
+    category: "registration",
+    popularity: 85
   },
   {
     id: "4",
-    text: "What is the absence and makeup policy?",
-    slug: "absence-makeup-policy",
-    category: "policy",
-    popularity: 76
+    text: "What are the practice schedules?",
+    slug: "practice-schedules",
+    category: "schedule",
+    popularity: 80
   },
   {
     id: "5",
-    text: "How do I schedule a makeup class?",
-    slug: "schedule-makeup-class",
-    category: "schedule",
-    popularity: 71
+    text: "How does MAP testing work?",
+    slug: "map-testing-explained",
+    category: "academic",
+    popularity: 75
   },
   {
     id: "6",
-    text: "What are the holiday closures for 2025?",
-    slug: "holiday-closures-2025",
-    category: "schedule",
-    popularity: 68
+    text: "Is there homework?",
+    slug: "homework-policy",
+    category: "academic",
+    popularity: 70
   }
 ];
 
