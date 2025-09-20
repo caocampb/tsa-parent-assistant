@@ -476,6 +476,9 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                         <button
                           key={i}
                           onClick={() => {
+                            console.log('Main related question clicked:', q);
+                            console.log('Current messages before send:', messages.length);
+                            console.log('Current status:', status);
                             sendMessage({
                               role: 'user',
                               parts: [
@@ -507,34 +510,42 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                 {messages.slice(2).filter((_, idx) => idx % 2 === 0).map((userMessage, idx) => {
                   const assistantMessage = messages[messages.indexOf(userMessage) + 1];
                   
-                  if (userMessage.role === 'user' && assistantMessage?.role === 'assistant') {
+                  // Show user message immediately, even if assistant hasn't responded yet
+                  if (userMessage.role === 'user') {
                     return (
                       <div key={userMessage.id} className="mt-10 pt-10 border-t">
                         <h2 className="text-2xl font-semibold mb-6">
                           {userMessage.parts.find(p => p.type === 'text')?.text}
                         </h2>
-                        <div className="text-lg leading-[1.7] text-foreground/90">
-                          {assistantMessage.parts.map((part, partIdx) => {
-                            if (part.type === 'text') {
-                              return (
-                                <div
-                                  key={partIdx}
-                                  dangerouslySetInnerHTML={{
-                                    __html: part.text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
-                                  }}
-                                />
-                              );
-                            }
-                            return null;
-                          })}
-                          {/* Show streaming cursor if this is the last message and still streaming */}
-                          {idx === Math.floor((messages.length - 3) / 2) && status === 'streaming' && (
-                            <span className="inline-block w-1 h-5 bg-foreground/50 animate-pulse ml-1" />
-                          )}
-                        </div>
                         
-                        {/* Action buttons for this answer */}
-                        <div className="flex items-center gap-2 mt-6 pt-6 border-t">
+                        {/* Show loading skeleton if no assistant message yet */}
+                        {!assistantMessage ? (
+                          <AnswerSkeleton />
+                        ) : (
+                          <div className="text-lg leading-[1.7] text-foreground/90">
+                            {assistantMessage.parts.map((part, partIdx) => {
+                              if (part.type === 'text') {
+                                return (
+                                  <div
+                                    key={partIdx}
+                                    dangerouslySetInnerHTML={{
+                                      __html: part.text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
+                                    }}
+                                  />
+                                );
+                              }
+                              return null;
+                            })}
+                            {/* Show streaming cursor if this is the last message and still streaming */}
+                            {idx === Math.floor((messages.length - 3) / 2) && status === 'streaming' && (
+                              <span className="inline-block w-1 h-5 bg-foreground/50 animate-pulse ml-1" />
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Action buttons for this answer - only show when assistant has responded */}
+                        {assistantMessage && (
+                          <div className="flex items-center gap-2 mt-6 pt-6 border-t">
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button
@@ -647,6 +658,7 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                               </TooltipContent>
                             </Tooltip>
                           </div>
+                        )}
                         
                         {/* Show follow-up questions for this assistant message */}
                         {(() => {
@@ -705,6 +717,9 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
                                     <button
                                       key={i}
                                       onClick={() => {
+                                        console.log('Related question clicked:', q);
+                                        console.log('Current messages before send:', messages.length);
+                                        console.log('Current status:', status);
                                         sendMessage({
                                           role: 'user',
                                           parts: [
