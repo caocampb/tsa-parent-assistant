@@ -104,14 +104,14 @@ function categorizeQuestion(question: string): string {
 // Smart fallback messages based on question category
 function getFallbackMessage(question: string, audience: string): string {
   const category = categorizeQuestion(question);
-  const contactInfo = "Please contact TSA at (512) 555-8722";
+  const contactInfo = "Please contact TSA at (512) 555-0199";
   
   const fallbacks = {
     payment: `For payment method options and billing questions, ${contactInfo} or email billing@texassportsacademy.com.`,
-    schedule: `For specific schedule and timing questions, please check with ${audience === 'parent' ? 'your coach or the front desk' : 'the TSA operations team'} at (512) 555-8722.`,
+    schedule: `For specific schedule and timing questions, please check with ${audience === 'parent' ? 'your coach or the front desk' : 'the TSA operations team'} at (512) 555-0199.`,
     pricing: `For detailed pricing and fee information, ${contactInfo} to speak with our enrollment team.`,
     insurance: `For insurance requirements and coverage details, ${contactInfo} or email info@texassportsacademy.com.`,
-    facility: `For facility and space requirements, please contact our real estate team at (512) 555-8722.`,
+    facility: `For facility and space requirements, please contact our real estate team at (512) 555-0199.`,
     sports: `For information about specific sports programs and activities, ${contactInfo}.`,
     general: `I don't have that specific information. ${contactInfo}.`
   };
