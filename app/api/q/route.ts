@@ -133,11 +133,12 @@ function calculateKeywordOverlap(question: string, content: string): number {
   
   const questionKeywords = new Set(getKeywords(question));
   const contentKeywords = getKeywords(content);
+  const contentKeywordsSet = new Set(contentKeywords);
   
   // Count overlapping keywords
   let overlap = 0;
   for (const keyword of questionKeywords) {
-    if (contentKeywords.includes(keyword)) {
+    if (contentKeywordsSet.has(keyword)) {
       overlap++;
     }
   }
