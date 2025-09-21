@@ -173,12 +173,27 @@ export async function POST(request: NextRequest) {
 
 // GET /api/documents - List all documents
 export async function GET() {
-  // Fetch from all three tables
-  const [parentDocs, coachDocs, sharedDocs] = await Promise.all([
-    supabase.from('documents_parent').select('*').order('uploaded_at', { ascending: false }),
-    supabase.from('documents_coach').select('*').order('uploaded_at', { ascending: false }),
-    supabase.from('documents_shared').select('*').order('uploaded_at', { ascending: false })
-  ]);
+  try {
+    console.log('[Documents API] Called');
+    console.log('[Documents API] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL?.slice(0, 30) + '...');
+    console.log('[Documents API] Has anon key:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    console.log('[Documents API] Has service key:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+    
+    // Fetch from all three tables
+    const [parentDocs, coachDocs, sharedDocs] = await Promise.all([
+      supabase.from('documents_parent').select('*').order('uploaded_at', { ascending: false }),
+      supabase.from('documents_coach').select('*').order('uploaded_at', { ascending: false }),
+      supabase.from('documents_shared').select('*').order('uploaded_at', { ascending: false })
+    ]);
+    
+    console.log('[Documents API] Query results:', {
+      parent: parentDocs.data?.length || 0,
+      parentError: parentDocs.error,
+      coach: coachDocs.data?.length || 0,
+      coachError: coachDocs.error,
+      shared: sharedDocs.data?.length || 0,
+      sharedError: sharedDocs.error
+    });
   
   // Combine results with audience tags
   const allDocs = [
@@ -206,6 +221,23 @@ export async function GET() {
   }
 
   return NextResponse.json(sortedDocs);
+  } catch (error) {
+    console.error('[Documents API] Caught error:', error);
+    console.error('[Documents API] Error type:', typeof error);
+    console.error('[Documents API] Error details:', JSON.stringify(error, null, 2));
+    
+    return NextResponse.json(
+      { 
+        error: 'Failed to fetch documents',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        env: {
+          hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+          hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        }
+      },
+      { status: 500 }
+    );
+  }
 }
 
 export async function DELETE(request: NextRequest) {
