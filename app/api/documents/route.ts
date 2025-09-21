@@ -6,6 +6,9 @@ import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import OpenAI from 'openai';
 import { encoding_for_model } from 'tiktoken';
 
+// Force Node.js runtime for tiktoken compatibility
+export const runtime = 'nodejs';
+
 // Initialize OpenAI
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || ''
