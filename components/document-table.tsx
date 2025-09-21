@@ -11,7 +11,6 @@ interface Document {
   id: string;
   name: string;
   type: "pdf" | "docx" | "txt" | "audio" | "document";
-  docType?: string; // The actual doc_type from DB: 'handbook', 'transcript', etc.
   size: number;
   uploadedAt: Date;
   audience?: 'parent' | 'coach' | 'shared';
@@ -190,19 +189,7 @@ export function DocumentTable({ documents, onDelete, isFiltered }: DocumentTable
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium font-mono">{doc.name}</span>
-                      {/* Doc type badge if available */}
-                      {doc.docType && doc.docType !== 'document' && (
-                        <span className="px-1.5 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground rounded capitalize">
-                          {doc.docType}
-                        </span>
-                      )}
-                      {/* NEW badge for recent files */}
-                      {new Date().getTime() - doc.uploadedAt.getTime() < 24 * 60 * 60 * 1000 && (
-                        <span className="px-1.5 py-0.5 text-[10px] font-medium bg-green-100 text-green-700 rounded">
-                          NEW
-                        </span>
-                      )}
-                      {/* Audience badge */}
+                      {/* Audience badge - the only one that matters */}
                       {doc.audience && (
                         <span className={cn(
                           "px-1.5 py-0.5 text-[10px] font-medium rounded",
@@ -210,25 +197,14 @@ export function DocumentTable({ documents, onDelete, isFiltered }: DocumentTable
                           doc.audience === 'coach' && "bg-green-100 text-green-700",
                           doc.audience === 'shared' && "bg-purple-100 text-purple-700"
                         )}>
-                          {doc.audience === 'parent' ? 'PARENT' : doc.audience === 'coach' ? 'COACH' : 'SHARED'}
-                        </span>
-                      )}
-                      {/* Warning for large files */}
-                      {doc.size > 8 * 1024 * 1024 && (
-                        <span className="px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-700 rounded">
-                          LARGE
+                          {doc.audience === 'parent' ? 'Parent' : doc.audience === 'coach' ? 'Coach' : 'Shared'}
                         </span>
                       )}
                     </div>
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={cn(
-                    "text-sm",
-                    doc.size > 9.5 * 1024 * 1024 ? "text-destructive font-medium" :
-                    doc.size > 8 * 1024 * 1024 ? "text-amber-600 font-medium" :
-                    "text-muted-foreground"
-                  )}>
+                  <span className="text-sm text-muted-foreground">
                     {formatFileSize(doc.size)}
                   </span>
                 </td>

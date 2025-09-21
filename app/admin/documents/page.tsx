@@ -13,7 +13,6 @@ interface Document {
   id: string;
   name: string;
   type: "pdf" | "docx" | "txt" | "audio" | "document";
-  docType?: string; // The actual doc_type from DB: 'handbook', 'transcript', etc.
   size: number;
   uploadedAt: Date;
   audience?: 'parent' | 'coach' | 'shared';
@@ -45,7 +44,6 @@ export default function AdminPage() {
                   doc.filename.endsWith('.txt') ? 'txt' :
                   doc.filename.endsWith('.mp3') || doc.filename.endsWith('.wav') ? 'audio' :
                   'document',
-            docType: doc.doc_type, // Preserve the actual doc_type from DB
             size: 0, // Size not stored in DB currently
             uploadedAt: new Date(doc.uploaded_at),
             audience: doc.audience
