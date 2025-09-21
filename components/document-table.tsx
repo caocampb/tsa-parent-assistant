@@ -10,7 +10,8 @@ import { DocumentCard } from "./document-card";
 interface Document {
   id: string;
   name: string;
-  type: "pdf" | "docx" | "audio";
+  type: "pdf" | "docx" | "txt" | "audio" | "document";
+  docType?: string; // The actual doc_type from DB: 'handbook', 'transcript', etc.
   size: number;
   uploadedAt: Date;
   audience?: 'parent' | 'coach' | 'shared';
@@ -53,6 +54,10 @@ export function DocumentTable({ documents, onDelete, isFiltered }: DocumentTable
     switch (type) {
       case "audio":
         return AudioLinesIcon;
+      case "pdf":
+      case "docx":
+      case "txt":
+      case "document":
       default:
         return FileTextIcon;
     }
@@ -178,12 +183,19 @@ export function DocumentTable({ documents, onDelete, isFiltered }: DocumentTable
                       "flex items-center justify-center w-8 h-8 rounded-md transition-colors",
                       doc.type === "audio" ? "bg-purple-50 text-purple-600 group-hover:bg-purple-100" :
                       doc.type === "pdf" ? "bg-red-50 text-red-600 group-hover:bg-red-100" :
+                      doc.type === "txt" ? "bg-green-50 text-green-600 group-hover:bg-green-100" :
                       "bg-blue-50 text-blue-600 group-hover:bg-blue-100"
                     )}>
                       <Icon className="w-4 h-4" />
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium font-mono">{doc.name}</span>
+                      {/* Doc type badge if available */}
+                      {doc.docType && doc.docType !== 'document' && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground rounded capitalize">
+                          {doc.docType}
+                        </span>
+                      )}
                       {/* NEW badge for recent files */}
                       {new Date().getTime() - doc.uploadedAt.getTime() < 24 * 60 * 60 * 1000 && (
                         <span className="px-1.5 py-0.5 text-[10px] font-medium bg-green-100 text-green-700 rounded">
