@@ -183,12 +183,18 @@ export async function GET() {
     // Create fresh client for this request
     const supabase = createSupabaseClient();
     
-    // Fetch from all three tables
-    const [parentDocs, coachDocs, sharedDocs] = await Promise.all([
-      supabase.from('documents_parent').select('*').order('uploaded_at', { ascending: false }),
-      supabase.from('documents_coach').select('*').order('uploaded_at', { ascending: false }),
-      supabase.from('documents_shared').select('*').order('uploaded_at', { ascending: false })
-    ]);
+    // Test each table individually to identify which one fails
+    console.log('[Documents API] Testing documents_parent...');
+    const parentDocs = await supabase.from('documents_parent').select('*').order('uploaded_at', { ascending: false });
+    console.log('[Documents API] Parent result:', { count: parentDocs.data?.length, error: parentDocs.error });
+    
+    console.log('[Documents API] Testing documents_coach...');
+    const coachDocs = await supabase.from('documents_coach').select('*').order('uploaded_at', { ascending: false });
+    console.log('[Documents API] Coach result:', { count: coachDocs.data?.length, error: coachDocs.error });
+    
+    console.log('[Documents API] Testing documents_shared...');
+    const sharedDocs = await supabase.from('documents_shared').select('*').order('uploaded_at', { ascending: false });
+    console.log('[Documents API] Shared result:', { count: sharedDocs.data?.length, error: sharedDocs.error });
     
     console.log('[Documents API] Query results:', {
       parent: parentDocs.data?.length || 0,
