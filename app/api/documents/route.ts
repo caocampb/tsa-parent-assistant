@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createSupabaseClient } from '@/lib/supabase';
 import mammoth from 'mammoth';
 import { extractText } from 'unpdf';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
@@ -18,6 +18,7 @@ function formatPgVector(embedding: number[]): string {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createSupabaseClient();
     // Check if OpenAI API key is configured
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
@@ -179,6 +180,9 @@ export async function GET() {
     console.log('[Documents API] Has anon key:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     console.log('[Documents API] Has service key:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
     
+    // Create fresh client for this request
+    const supabase = createSupabaseClient();
+    
     // Fetch from all three tables
     const [parentDocs, coachDocs, sharedDocs] = await Promise.all([
       supabase.from('documents_parent').select('*').order('uploaded_at', { ascending: false }),
@@ -242,6 +246,7 @@ export async function GET() {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const supabase = createSupabaseClient();
     const { searchParams } = new URL(request.url);
     const documentId = searchParams.get('id');
     const audience = searchParams.get('audience');
@@ -335,6 +340,7 @@ export async function DELETE(request: NextRequest) {
 
 // Process file and create chunks
 async function processFile(file: File, documentId: string, audience: string = 'parent'): Promise<any[]> {
+  const supabase = createSupabaseClient();
   const fileType = file.name.split('.').pop()?.toLowerCase();
   let content = '';
   let pageNumber: number | null = null;
