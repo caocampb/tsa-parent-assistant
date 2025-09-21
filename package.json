@@ -6,7 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "bun test",
+    "test:smoke": "bun test tests/smoke.test.ts",
+    "test:parent-flow": "bun test tests/parent-flow.test.ts",
+    "test:admin-flow": "bun test tests/admin-flow.test.ts", 
+    "test:resilience": "bun test tests/resilience.test.ts",
+    "test:all": "bun test --timeout 60000",
+    "test:report": "bun test --timeout 60000 | tee test-results.txt && echo '\n✅ Test report saved to test-results.txt'"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.30",
