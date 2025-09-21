@@ -35,7 +35,7 @@ export function NetworkStatus() {
         >
           <div className="max-w-6xl mx-auto flex items-center gap-2 text-sm">
             <WifiOffIcon className="h-4 w-4" />
-            <span>You're offline. Some features may not work.</span>
+            <span>You&apos;re offline. Some features may not work.</span>
           </div>
         </motion.div>
       )}

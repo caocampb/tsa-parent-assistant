@@ -58,8 +58,8 @@ export default function AnswerPage({ params }: { params: Promise<{ slug: string 
     // Extract chunk metadata from messages (Phase 3)
     messages.forEach((message, idx) => {
       if (message.role === 'assistant') {
-        const chunkMetaPart = message.parts?.find(p => (p as any).type === 'chunk-metadata');
-        const metricsPart = message.parts?.find(p => (p as any).type === 'response-metrics');
+        const chunkMetaPart = message.parts?.find(p => (p as any).type === 'data-chunk-metadata');
+        const metricsPart = message.parts?.find(p => (p as any).type === 'data-response-metrics');
         
         if (chunkMetaPart && 'data' in chunkMetaPart) {
           const metadata = (chunkMetaPart as any).data;

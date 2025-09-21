@@ -16,7 +16,7 @@ async function verifyDocuments() {
   
   for (const audience of audiences) {
     console.log(`\n📁 Checking ${audience.toUpperCase()} documents:`);
-    console.log('=' .repeat(50));
+    console.log('='.repeat(50));
     
     // Get documents
     const { data: docs, error: docError } = await supabase
@@ -73,14 +73,17 @@ async function verifyDocuments() {
           .eq('id', firstChunk.id)
           .single();
         
-        if (embedCheck) {
-          const isVector = embedCheck.type === 'vector' || embedCheck.type?.includes('double');
-          const dimensions = embedCheck.length;
+        type EmbedCheck = { type?: string | null; length?: number | null } | null;
+        const ec = embedCheck as EmbedCheck;
+        
+        if (ec) {
+          const isVector = (ec.type === 'vector') || (ec.type?.includes('double') ?? false);
+          const dimensions = ec.length ?? null;
           
           if (isVector && dimensions === 1536) {
             console.log(`     ✅ Embedding: Valid vector with 1536 dimensions`);
           } else {
-            console.log(`     ❌ Embedding: Type=${embedCheck.type}, Dimensions=${dimensions}`);
+            console.log(`     ❌ Embedding: Type=${ec.type}, Dimensions=${dimensions}`);
           }
         }
       } else {
@@ -94,12 +97,11 @@ async function verifyDocuments() {
   
   // Check Q&A pairs too
   console.log(`\n\n❓ Checking Q&A Pairs:`);
-  console.log('=' .repeat(50));
+  console.log('='.repeat(50));
   
-  const { data: qaPairs, error: qaError } = await supabase
+  const { error: qaError } = await supabase
     .from('qa_pairs')
-    .select('audience, count', { count: 'exact' })
-    .limit(0); // Just get count
+    .select('*', { count: 'exact', head: true });
   
   if (!qaError) {
     const { count } = await supabase

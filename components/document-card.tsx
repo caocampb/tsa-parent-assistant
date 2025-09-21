@@ -8,7 +8,7 @@ import { toast } from "sonner";
 interface Document {
   id: string;
   name: string;
-  type: "pdf" | "docx" | "audio";
+  type: "pdf" | "docx" | "txt" | "audio" | "document";
   size: number;
   uploadedAt: Date;
 }

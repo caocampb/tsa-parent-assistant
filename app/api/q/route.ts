@@ -521,13 +521,13 @@ Generate 3 relevant follow-up questions that a parent might ask next about TSA. 
           if (c.table_name?.includes('coach')) return 'coach' as const;
           return 'shared' as const;
         }),
-        search_type: (useHybridSearch ? 'hybrid' : 'rag') as const,
+        search_type: useHybridSearch ? 'hybrid' : 'rag',
         confidence_score: topConfidence
       };
       
       // Send chunk metadata first
       writer.write({
-        type: 'chunk-metadata',
+        type: 'data-chunk-metadata',
         data: chunkMetadata
       });
       
@@ -568,7 +568,7 @@ Generate 3 relevant follow-up questions that a parent might ask next about TSA. 
             
             // Update chunk metadata with response time
             writer.write({
-              type: 'response-metrics',
+              type: 'data-response-metrics',
               data: { response_time_ms: responseTime }
             });
             

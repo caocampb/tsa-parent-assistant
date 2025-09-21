@@ -4,7 +4,7 @@ export interface Question {
   id: string;
   text: string;
   slug: string;
-  category: "schedule" | "policy" | "registration" | "uniform" | "payment" | "general";
+  category: "schedule" | "policy" | "registration" | "uniform" | "payment" | "general" | "platform" | "academic";
   popularity: number; // For sorting popular questions
 }
 

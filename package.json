@@ -59,6 +59,8 @@
     "lightningcss-linux-x64-gnu": "1.22.1",
     "lightningcss-linux-x64-musl": "1.22.1",
     "lightningcss-linux-arm64-gnu": "1.22.1",
-    "lightningcss-linux-arm64-musl": "1.22.1"
+    "lightningcss-linux-arm64-musl": "1.22.1",
+    "lightningcss-darwin-arm64": "1.22.1",
+    "lightningcss-darwin-x64": "1.22.1"
   }
 }

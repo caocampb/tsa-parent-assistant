@@ -9,6 +9,7 @@ interface FileWithProgress extends File {
   progress?: number;
   speed?: number;
   timeRemaining?: string;
+  _file?: File;
 }
 
 interface UploadZoneProps {
@@ -66,9 +67,9 @@ export function UploadZone({
         speed: undefined,
         timeRemaining: undefined
       }));
-      setFiles(fileObjects as any);
+      setFiles(fileObjects as FileWithProgress[]);
     }
-  }, [maxSize]);
+  }, [maxSize, validateFile]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -126,7 +127,7 @@ export function UploadZone({
       // Complete upload
       setTimeout(() => {
         // Extract original File objects
-        const originalFiles = files.map(f => (f as any)._file || f).filter(Boolean);
+        const originalFiles = files.map(f => (f as FileWithProgress)._file || f).filter(Boolean);
         onUpload(originalFiles);
         setFiles([]);
         setIsUploading(false);

@@ -3,7 +3,7 @@ interface RetryOptions {
   initialDelay?: number;
   maxDelay?: number;
   factor?: number;
-  onRetry?: (attempt: number, error: any) => void;
+  onRetry?: (attempt: number, error: unknown) => void;
 }
 
 export async function retryWithBackoff<T>(
@@ -18,7 +18,7 @@ export async function retryWithBackoff<T>(
     onRetry
   } = options;
 
-  let lastError: any;
+  let lastError: unknown;
   
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -50,18 +50,20 @@ export async function retryWithBackoff<T>(
 }
 
 // Helper to check if error is retryable
-export function isRetryableError(error: any): boolean {
+export function isRetryableError(error: unknown): boolean {
   // Network errors
   if (!navigator.onLine) return false; // Don't retry if offline
   
+  const err = error as { name?: string; status?: number };
+  
   // Timeout errors
-  if (error?.name === 'AbortError') return true;
+  if (err?.name === 'AbortError') return true;
   
   // Server errors (5xx)
-  if (error?.status >= 500 && error?.status < 600) return true;
+  if (err?.status && err.status >= 500 && err.status < 600) return true;
   
   // Rate limiting (429)
-  if (error?.status === 429) return true;
+  if (err?.status === 429) return true;
   
   return false;
 }

@@ -86,7 +86,7 @@ export function SearchBox({
                   : "hover:bg-background/50 hover:text-foreground"
               )}
             >
-              I'm a Parent
+              I&apos;m a Parent
             </button>
             <button
               type="button"
@@ -98,7 +98,7 @@ export function SearchBox({
                   : "hover:bg-background/50 hover:text-foreground"
               )}
             >
-              I'm a Coach
+              I&apos;m a Coach
             </button>
           </div>
         </div>

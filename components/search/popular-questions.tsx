@@ -9,7 +9,8 @@ import {
   ShirtIcon,
   FileTextIcon,
   ClockIcon,
-  CalendarDaysIcon 
+  CalendarDaysIcon,
+  type LucideIcon
 } from "lucide-react";
 
 interface PopularQuestionsProps {
@@ -18,13 +19,15 @@ interface PopularQuestionsProps {
 }
 
 // Map categories to icons
-const categoryIcons = {
+const categoryIcons: Partial<Record<Question["category"], LucideIcon>> = {
   schedule: ClockIcon,
   policy: FileTextIcon,
   registration: CalendarIcon,
   uniform: ShirtIcon,
   payment: DollarSignIcon,
   general: CalendarDaysIcon,
+  platform: FileTextIcon,
+  academic: FileTextIcon,
 };
 
 export function PopularQuestions({ questions, className }: PopularQuestionsProps) {
