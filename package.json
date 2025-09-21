@@ -10,7 +10,7 @@
     "test": "bun test",
     "test:smoke": "bun test tests/smoke.test.ts",
     "test:parent-flow": "bun test tests/parent-flow.test.ts",
-    "test:admin-flow": "bun test tests/admin-flow.test.ts", 
+    "test:admin-flow": "bun test tests/admin-flow.test.ts",
     "test:resilience": "bun test tests/resilience.test.ts",
     "test:all": "bun test --timeout 60000",
     "test:report": "bun test --timeout 60000 | tee test-results.txt && echo '\n✅ Test report saved to test-results.txt'"
@@ -24,15 +24,16 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@supabase/supabase-js": "^2.57.4",
+    "@tailwindcss/oxide": "^4.1.13",
     "ai": "^5.0.47",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.2",
     "framer-motion": "^12.23.12",
+    "lightningcss": "^1.22.1",
     "lucide-react": "^0.544.0",
     "mammoth": "^1.10.0",
     "next": "15.5.3",
-    "lightningcss": "^1.22.1",
     "openai": "^5.20.3",
     "pdf-parse": "^1.1.1",
     "react": "19.1.0",
@@ -56,11 +57,11 @@
     "typescript": "^5"
   },
   "optionalDependencies": {
-    "lightningcss-linux-x64-gnu": "1.22.1",
-    "lightningcss-linux-x64-musl": "1.22.1",
+    "lightningcss-darwin-arm64": "1.22.1",
+    "lightningcss-darwin-x64": "1.22.1",
     "lightningcss-linux-arm64-gnu": "1.22.1",
     "lightningcss-linux-arm64-musl": "1.22.1",
-    "lightningcss-darwin-arm64": "1.22.1",
-    "lightningcss-darwin-x64": "1.22.1"
+    "lightningcss-linux-x64-gnu": "1.22.1",
+    "lightningcss-linux-x64-musl": "1.22.1"
   }
 }
